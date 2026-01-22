@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply text-slate-900 antialiased;
+}
+
+.tiptap {
+  @apply min-h-[160px] outline-none;
+}
+
+.tiptap > * {
+  @apply leading-relaxed;
+}
+
+.tiptap ul {
+  @apply list-disc pl-6;
+}
+
+.tiptap ol {
+  @apply list-decimal pl-6;
+}
+
+.tiptap h2,
+.tiptap h3 {
+  @apply font-semibold;
+}
+
+:dir(rtl) .tiptap ul,
+:dir(rtl) .tiptap ol,
+:dir(rtl) .prose ul,
+:dir(rtl) .prose ol {
+  padding-right: 1.5rem;
+  padding-left: 0;
+  list-style-position: inside;
+}
+
+:dir(rtl) .tiptap li,
+:dir(rtl) .prose li {
+  text-align: right;
+}

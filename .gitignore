@@ -1,0 +1,9 @@
+node_modules
+.next
+.env
+dev.db
+dev.db-journal
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
