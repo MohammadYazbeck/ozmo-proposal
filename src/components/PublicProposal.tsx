@@ -85,7 +85,7 @@ export const PublicProposal = ({
     ? "flex-row-reverse justify-end"
     : "flex-row justify-start";
   const workPlanRowClass = "md:flex-row";
-  const listDotClass = `flex items-start gap-2 ${rowClass}`;
+  const listDotClass = `flex items-start gap-2 `;
   const listGoalClass = `flex items-start gap-3`;
   const sectionClass =
     "relative scroll-mt-24 pt-12 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/15 before:to-transparent";
