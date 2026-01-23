@@ -177,7 +177,9 @@ export const PublicProposal = ({
           ) : null}
         </header>
         <div key={currentLang} className="mt-10 space-y-20">
-          <section className={`flex flex-col gap-4 animate-fade-up`}>
+          <section
+            className={`flex flex-col gap-4 animate-fade-up text-center`}
+          >
             <h1 className="text-3xl font-semibold text-white drop-shadow-[0_0_25px_rgba(249,115,22,0.45)] md:text-5xl">
               {data.hero.title}
             </h1>
