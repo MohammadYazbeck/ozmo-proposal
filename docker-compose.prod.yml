@@ -1,0 +1,26 @@
+services:
+  web:
+    build: .
+    container_name: ozmo-proposal-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: https://proposal.ozmo.media
+      DATABASE_URL: file:/data/dev.db
+    volumes:
+      - /srv/projects/ozmo-proposal/data:/data
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ozmo-proposal.rule=Host(`proposal.ozmo.media`)"
+      - "traefik.http.routers.ozmo-proposal.entrypoints=websecure"
+      - "traefik.http.routers.ozmo-proposal.tls=true"
+      - "traefik.http.routers.ozmo-proposal.tls.certresolver=lets"
+      - "traefik.http.services.ozmo-proposal.loadbalancer.server.port=3000"
+
+networks:
+  web:
+    external: true

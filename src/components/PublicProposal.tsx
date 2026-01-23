@@ -91,8 +91,8 @@ export const PublicProposal = ({
   const listGoalClass = `flex items-start gap-3 `;
   const sectionClass =
     "relative scroll-mt-24 pt-12 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/15 before:to-transparent";
-  const phoneHref = "tel:+963982475910";
-  const whatsappHref = "https://wa.me/+963982475910";
+  const phoneHref = "tel:";
+  const whatsappHref = "https://wa.me/";
   const floatingButtonClass =
     "group flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/5 text-slate-100 backdrop-blur transition hover:border-brand-orange/50 hover:bg-white/10";
 
