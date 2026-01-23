@@ -63,7 +63,7 @@ export const PublicProposal = ({
   hasAr,
 }: PublicProposalProps) => {
   const singleLanguage = !hasEn || !hasAr;
-  const defaultLang: LangKey = hasAr ? "ar" : "en";
+  const defaultLang: LangKey = hasEn ? "en" : "ar";
   const [activeLang, setActiveLang] = useState<LangKey>(defaultLang);
   const currentLang = singleLanguage ? defaultLang : activeLang;
 
@@ -80,21 +80,25 @@ export const PublicProposal = ({
   const visionHtml = data.visionHtml.trim();
 
   const textAlign = isRtl ? "text-right" : "text-left";
-  const alignClass = isRtl
-    ? "items-center text-center"
-    : "items-center text-center";
+  const alignClass = isRtl ? "items-end text-right" : "items-start text-left";
   const rowClass = isRtl
     ? "flex-row-reverse justify-end"
     : "flex-row justify-start";
   const workPlanRowClass = isRtl ? "md:flex-row-reverse" : "md:flex-row";
-  const listDotClass = `flex items-start gap-2`;
-  const listGoalClass = `flex items-start gap-3 `;
+  const listDotClass = `flex items-start gap-2 ${rowClass}`;
+  const listGoalClass = `flex items-start gap-3 ${rowClass}`;
   const sectionClass =
     "relative scroll-mt-24 pt-12 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/15 before:to-transparent";
   const phoneHref = "tel:";
   const whatsappHref = "https://wa.me/";
   const floatingButtonClass =
     "group flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/5 text-slate-100 backdrop-blur transition hover:border-brand-orange/50 hover:bg-white/10";
+  const [isPlanOpen, setIsPlanOpen] = useState(false);
+  const togglePlan = () => {
+    setIsPlanOpen((prev) => !prev);
+  };
+  const planSpacerClass = isRtl ? "mr-auto" : "ml-auto";
+  const planHeaderClass = isRtl ? "flex-row-reverse text-right" : "flex-row text-left";
 
   useEffect(() => {
     const html = document.documentElement;
@@ -227,17 +231,49 @@ export const PublicProposal = ({
 
           {proposal.showWorkPlan ? (
             <section className={`${sectionClass} space-y-6`}>
-              <h2
-                className={`text-2xl font-semibold tracking-tight text-white ${textAlign}`}
+              <button
+                type="button"
+                onClick={togglePlan}
+                aria-expanded={isPlanOpen}
+                aria-controls="work-plan-content"
+                className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-brand-orange/40 ${planHeaderClass}`}
               >
-                {labels.workPlan}
-              </h2>
-              <div className="grid gap-4">
+                <span className={`text-2xl font-semibold tracking-tight text-white ${textAlign}`}>
+                  {labels.workPlan}
+                </span>
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 transition ${planSpacerClass} ${
+                    isPlanOpen
+                      ? "rotate-180 border-brand-orange/40 text-brand-orange"
+                      : "hover:border-white/25"
+                  }`}
+                  aria-hidden="true"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 8l5 5 5-5" />
+                  </svg>
+                </span>
+              </button>
+              <div
+                id="work-plan-content"
+                className={`grid gap-4 overflow-hidden transition-all duration-300 ${
+                  isPlanOpen ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+                }`}
+                aria-hidden={!isPlanOpen}
+              >
                 {data.workPlan.map((block, blockIndex) => (
                   <div key={`work-${blockIndex}`} className={cardClass}>
                     <div
                       dir={`${isRtl ? "rtl" : "ltr"}`}
-                      className={`flex  gap-3 md:items-start md:gap-6 flex-row ${textAlign}`}
+                      className={`flex flex-col gap-3 md:items-start md:gap-6 ${workPlanRowClass} ${textAlign}`}
                     >
                       <div className="text-3xl font-semibold text-brand-orange">
                         {block.number}
@@ -253,9 +289,7 @@ export const PublicProposal = ({
                         ) : null}
                       </div>
                     </div>
-                    <ul
-                      className={`mt-4 space-y-2 text-slate-200 ${textAlign}`}
-                    >
+                    <ul className={`mt-4 space-y-2 text-slate-200 ${textAlign}`}>
                       {block.bullets
                         .filter((bullet) => bullet.text.trim())
                         .map((bullet, bulletIndex) => (

@@ -26,7 +26,8 @@ type ProposalEditorProps = {
   initialDataAr: ProposalData;
 };
 
-const initialState: { error?: string; message?: string } = { error: "", message: "" };
+type ActionState = { error?: string; message?: string };
+const initialState: ActionState = { error: "", message: "" };
 
 const SaveButton = ({ label }: { label: string }) => {
   const { pending } = useFormStatus();
@@ -57,8 +58,14 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
 
   const [activeLang, setActiveLang] = useState<"en" | "ar">(defaultLang);
 
-  const [state, formAction] = useFormState(
-    mode === "create" ? createProposal : updateProposal,
+  const action = async (prevState: ActionState, formData: FormData) => {
+    const handler = mode === "create" ? createProposal : updateProposal;
+    const result = await handler(prevState, formData);
+    return result ?? prevState;
+  };
+
+  const [state, formAction] = useFormState<ActionState, FormData>(
+    action,
     initialState
   );
 
