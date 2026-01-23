@@ -84,9 +84,9 @@ export const PublicProposal = ({
   const rowClass = isRtl
     ? "flex-row-reverse justify-end"
     : "flex-row justify-start";
-  const workPlanRowClass = isRtl ? "md:flex-row-reverse" : "md:flex-row";
+  const workPlanRowClass = "md:flex-row";
   const listDotClass = `flex items-start gap-2 ${rowClass}`;
-  const listGoalClass = `flex items-start gap-3 ${rowClass}`;
+  const listGoalClass = `flex items-start gap-3`;
   const sectionClass =
     "relative scroll-mt-24 pt-12 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/15 before:to-transparent";
   const phoneHref = "tel:";
@@ -98,7 +98,7 @@ export const PublicProposal = ({
     setIsPlanOpen((prev) => !prev);
   };
   const planSpacerClass = isRtl ? "mr-auto" : "ml-auto";
-  const planHeaderClass = isRtl ? "flex-row-reverse text-right" : "flex-row text-left";
+  const planHeaderClass = isRtl ? "flex-row text-right" : "flex-row text-left";
 
   useEffect(() => {
     const html = document.documentElement;
@@ -177,9 +177,7 @@ export const PublicProposal = ({
           ) : null}
         </header>
         <div key={currentLang} className="mt-10 space-y-20">
-          <section
-            className={`flex flex-col gap-4 animate-fade-up ${alignClass}`}
-          >
+          <section className={`flex flex-col gap-4 animate-fade-up`}>
             <h1 className="text-3xl font-semibold text-white drop-shadow-[0_0_25px_rgba(249,115,22,0.45)] md:text-5xl">
               {data.hero.title}
             </h1>
@@ -219,7 +217,10 @@ export const PublicProposal = ({
                   <ul className={`mt-4 space-y-3 text-slate-200 ${textAlign}`}>
                     {goals.map((goal, goalIndex) => (
                       <li key={`goal-${goalIndex}`} className={listGoalClass}>
-                        <span className="flex-shrink-0">🎯</span>
+                        <span
+                          className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
+                          aria-hidden="true"
+                        />
                         <span>{goal}</span>
                       </li>
                     ))}
@@ -238,7 +239,9 @@ export const PublicProposal = ({
                 aria-controls="work-plan-content"
                 className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-brand-orange/40 ${planHeaderClass}`}
               >
-                <span className={`text-2xl font-semibold tracking-tight text-white ${textAlign}`}>
+                <span
+                  className={`text-2xl font-semibold tracking-tight text-white ${textAlign}`}
+                >
                   {labels.workPlan}
                 </span>
                 <span
@@ -265,7 +268,9 @@ export const PublicProposal = ({
               <div
                 id="work-plan-content"
                 className={`grid gap-4 overflow-hidden transition-all duration-300 ${
-                  isPlanOpen ? "max-h-[4000px] opacity-100" : "max-h-0 opacity-0"
+                  isPlanOpen
+                    ? "max-h-[4000px] opacity-100"
+                    : "max-h-0 opacity-0"
                 }`}
                 aria-hidden={!isPlanOpen}
               >
@@ -289,7 +294,9 @@ export const PublicProposal = ({
                         ) : null}
                       </div>
                     </div>
-                    <ul className={`mt-4 space-y-2 text-slate-200 ${textAlign}`}>
+                    <ul
+                      className={`mt-4 space-y-2 text-slate-200 ${textAlign}`}
+                    >
                       {block.bullets
                         .filter((bullet) => bullet.text.trim())
                         .map((bullet, bulletIndex) => (

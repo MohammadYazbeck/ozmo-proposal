@@ -405,7 +405,10 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
                 <div className="space-y-2">
                   {data.goals.map((goal, index) => (
                     <div key={`goal-${index}`} className="flex items-center gap-2">
-                      <span className="text-lg">🎯</span>
+                      <span
+                        className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
+                        aria-hidden="true"
+                      />
                       <input
                         value={goal}
                         onChange={(event) => updateGoals(index, event.target.value)}
