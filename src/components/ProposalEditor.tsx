@@ -17,6 +17,7 @@ type EditorProposal = {
   showWorkPlan?: boolean;
   showPricing?: boolean;
   showNotes?: boolean;
+  expiresAt?: string | Date | null;
 };
 
 type ProposalEditorProps = {
@@ -28,6 +29,18 @@ type ProposalEditorProps = {
 
 type ActionState = { error?: string; message?: string };
 const initialState: ActionState = { error: "", message: "" };
+
+const formatDateInput = (value?: string | Date | null) => {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+};
 
 const SaveButton = ({ label }: { label: string }) => {
   const { pending } = useFormStatus();
@@ -45,6 +58,15 @@ const SaveButton = ({ label }: { label: string }) => {
 export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }: ProposalEditorProps) => {
   const [dataEn, setDataEn] = useState<ProposalData>(initialDataEn);
   const [dataAr, setDataAr] = useState<ProposalData>(initialDataAr);
+  const [slug, setSlug] = useState(proposal?.slug ?? "");
+  const [expiresAt, setExpiresAt] = useState(formatDateInput(proposal?.expiresAt));
+  const [visibility, setVisibility] = useState({
+    showVision: proposal?.showVision ?? true,
+    showGoals: proposal?.showGoals ?? true,
+    showWorkPlan: proposal?.showWorkPlan ?? true,
+    showPricing: proposal?.showPricing ?? true,
+    showNotes: proposal?.showNotes ?? true
+  });
 
   const defaultLang = useMemo(() => {
     if (isLanguageAvailable(initialDataEn)) {
@@ -72,6 +94,14 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
   const data = activeLang === "en" ? dataEn : dataAr;
   const setData = activeLang === "en" ? setDataEn : setDataAr;
   const isRtl = activeLang === "ar";
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  const publicUrl = slug ? (baseUrl ? `${baseUrl}/p/${slug}` : `/p/${slug}`) : "";
+  const showVision = visibility.showVision;
+  const showGoals = visibility.showGoals;
+  const showWorkPlan = visibility.showWorkPlan;
+  const showPricing = visibility.showPricing;
+  const showNotes = visibility.showNotes;
+  const visionGoalsClass = showVision && showGoals ? "grid gap-6 lg:grid-cols-2" : "grid gap-6";
 
   const updateHero = (field: keyof ProposalData["hero"], value: string) => {
     setData((prev) => ({ ...prev, hero: { ...prev.hero, [field]: value } }));
@@ -224,6 +254,20 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
             {mode === "create" ? "New proposal" : "Edit proposal"}
           </h1>
           <p className="text-sm text-slate-500">Build and publish bilingual proposals.</p>
+          {proposal?.id && publicUrl ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">Public link:</span>
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-slate-200 px-2 py-0.5 text-slate-600 transition hover:border-brand-orange hover:text-brand-orange"
+              >
+                View
+              </a>
+              <span className="truncate">{publicUrl}</span>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {proposal?.id ? (
@@ -268,7 +312,8 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
             <label className="text-sm font-medium text-slate-700">Slug</label>
             <input
               name="slug"
-              defaultValue={proposal?.slug ?? ""}
+              value={slug}
+              onChange={(event) => setSlug(event.target.value)}
               placeholder="ozmo-proposal"
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
             />
@@ -288,6 +333,26 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
               Publishing requires a hero title in EN or AR.
             </p>
           </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700">Disable on</label>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <input
+                type="datetime-local"
+                name="expiresAt"
+                value={expiresAt}
+                onChange={(event) => setExpiresAt(event.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setExpiresAt("")}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+              >
+                Clear
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Leave empty for no expiry.</p>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -295,23 +360,58 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
             <label className="text-sm font-medium text-slate-700">Section visibility</label>
             <div className="mt-2 grid gap-2 text-sm text-slate-600">
               <label className="flex items-center gap-2">
-                <input type="checkbox" name="showVision" defaultChecked={proposal?.showVision ?? true} />
+                <input
+                  type="checkbox"
+                  name="showVision"
+                  checked={visibility.showVision}
+                  onChange={(event) =>
+                    setVisibility((prev) => ({ ...prev, showVision: event.target.checked }))
+                  }
+                />
                 Show Vision
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" name="showGoals" defaultChecked={proposal?.showGoals ?? true} />
+                <input
+                  type="checkbox"
+                  name="showGoals"
+                  checked={visibility.showGoals}
+                  onChange={(event) =>
+                    setVisibility((prev) => ({ ...prev, showGoals: event.target.checked }))
+                  }
+                />
                 Show Goals
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" name="showWorkPlan" defaultChecked={proposal?.showWorkPlan ?? true} />
+                <input
+                  type="checkbox"
+                  name="showWorkPlan"
+                  checked={visibility.showWorkPlan}
+                  onChange={(event) =>
+                    setVisibility((prev) => ({ ...prev, showWorkPlan: event.target.checked }))
+                  }
+                />
                 Show Work Plan
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" name="showPricing" defaultChecked={proposal?.showPricing ?? true} />
+                <input
+                  type="checkbox"
+                  name="showPricing"
+                  checked={visibility.showPricing}
+                  onChange={(event) =>
+                    setVisibility((prev) => ({ ...prev, showPricing: event.target.checked }))
+                  }
+                />
                 Show Pricing
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" name="showNotes" defaultChecked={proposal?.showNotes ?? true} />
+                <input
+                  type="checkbox"
+                  name="showNotes"
+                  checked={visibility.showNotes}
+                  onChange={(event) =>
+                    setVisibility((prev) => ({ ...prev, showNotes: event.target.checked }))
+                  }
+                />
                 Show Notes
               </label>
             </div>
@@ -391,214 +491,226 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
               </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold text-slate-900">Vision</h2>
-                <RichTextEditor
-                  value={data.visionHtml}
-                  onChange={(value) => setData((prev) => ({ ...prev, visionHtml: value }))}
-                  dir={isRtl ? "rtl" : "ltr"}
-                />
-              </div>
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold text-slate-900">Goals</h2>
-                <div className="space-y-2">
-                  {data.goals.map((goal, index) => (
-                    <div key={`goal-${index}`} className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
-                        aria-hidden="true"
-                      />
-                      <input
-                        value={goal}
-                        onChange={(event) => updateGoals(index, event.target.value)}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeGoal(index)}
-                        className="text-xs font-semibold text-slate-500 hover:text-red-600"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={addGoal}
-                  className="text-xs font-semibold text-brand-orange hover:text-orange-600"
-                >
-                  + Add goal
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold text-slate-900">Work Plan</h2>
-                <button
-                  type="button"
-                  onClick={addWorkPlanBlock}
-                  className="text-xs font-semibold text-brand-orange hover:text-orange-600"
-                >
-                  + Add block
-                </button>
-              </div>
-              {data.workPlan.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-                  No work plan blocks yet. Add one to get started.
-                </div>
-              ) : null}
-              <div className="grid gap-4">
-                {data.workPlan.map((block, index) => (
-                  <div key={`block-${index}`} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                      <div className="text-2xl font-bold text-brand-orange">{block.number}</div>
-                      <input
-                        value={block.heading ?? ""}
-                        onChange={(event) => updateWorkPlanBlock(index, { heading: event.target.value })}
-                        placeholder="Heading (optional)"
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeWorkPlanBlock(index)}
-                        className="text-xs font-semibold text-red-600 hover:text-red-700"
-                      >
-                        Remove block
-                      </button>
-                    </div>
-                    <textarea
-                      rows={2}
-                      value={block.leadText ?? ""}
-                      onChange={(event) => updateWorkPlanBlock(index, { leadText: event.target.value })}
-                      placeholder="Lead text (optional)"
-                      className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+            {showVision || showGoals ? (
+              <div className={visionGoalsClass}>
+                {showVision ? (
+                  <div className="space-y-3">
+                    <h2 className="text-lg font-semibold text-slate-900">Vision</h2>
+                    <RichTextEditor
+                      value={data.visionHtml}
+                      onChange={(value) => setData((prev) => ({ ...prev, visionHtml: value }))}
+                      dir={isRtl ? "rtl" : "ltr"}
                     />
-                    <div className="mt-3 space-y-2">
-                      {block.bullets.map((bullet, bulletIndex) => (
-                        <div key={`bullet-${index}-${bulletIndex}`} className="flex flex-col gap-2 md:flex-row md:items-center">
-                          <textarea
-                            rows={2}
-                            value={bullet.text}
-                            onChange={(event) => updateBullet(index, bulletIndex, { text: event.target.value })}
-                            placeholder="Bullet text"
+                  </div>
+                ) : null}
+                {showGoals ? (
+                  <div className="space-y-3">
+                    <h2 className="text-lg font-semibold text-slate-900">Goals</h2>
+                    <div className="space-y-2">
+                      {data.goals.map((goal, index) => (
+                        <div key={`goal-${index}`} className="flex items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
+                            aria-hidden="true"
+                          />
+                          <input
+                            value={goal}
+                            onChange={(event) => updateGoals(index, event.target.value)}
                             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
                           />
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="color"
-                              value={bullet.highlightColor || "#ffffff"}
-                              onChange={(event) => updateBullet(index, bulletIndex, { highlightColor: event.target.value })}
-                              className="h-9 w-10 cursor-pointer rounded border border-slate-200 bg-white"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => updateBullet(index, bulletIndex, { highlightColor: undefined })}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                            >
-                              Clear
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => moveBullet(index, bulletIndex, "up")}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                            >
-                              Up
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => moveBullet(index, bulletIndex, "down")}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-                            >
-                              Down
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeBullet(index, bulletIndex)}
-                              className="text-xs font-semibold text-slate-500 hover:text-red-600"
-                            >
-                              Remove
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeGoal(index)}
+                            className="text-xs font-semibold text-slate-500 hover:text-red-600"
+                          >
+                            Remove
+                          </button>
                         </div>
                       ))}
                     </div>
                     <button
                       type="button"
-                      onClick={() => addBullet(index)}
-                      className="mt-3 text-xs font-semibold text-brand-orange hover:text-orange-600"
+                      onClick={addGoal}
+                      className="text-xs font-semibold text-brand-orange hover:text-orange-600"
                     >
-                      + Add bullet
+                      + Add goal
                     </button>
                   </div>
-                ))}
+                ) : null}
               </div>
-            </div>
+            ) : null}
 
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-slate-900">Pricing (3 packages)</h2>
-              <div className="grid gap-4 lg:grid-cols-3">
-                {data.pricing.map((pkg, index) => (
-                  <div key={`pricing-${index}`} className="rounded-lg border border-slate-200 p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">Package name</label>
+            {showWorkPlan ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold text-slate-900">Work Plan</h2>
+                  <button
+                    type="button"
+                    onClick={addWorkPlanBlock}
+                    className="text-xs font-semibold text-brand-orange hover:text-orange-600"
+                  >
+                    + Add block
+                  </button>
+                </div>
+                {data.workPlan.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500">
+                    No work plan blocks yet. Add one to get started.
+                  </div>
+                ) : null}
+                <div className="grid gap-4">
+                  {data.workPlan.map((block, index) => (
+                    <div key={`block-${index}`} className="rounded-lg border border-slate-200 p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                        <div className="text-2xl font-bold text-brand-orange">{block.number}</div>
                         <input
-                          value={pkg.name}
-                          onChange={(event) => updatePricing(index, { name: event.target.value })}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                          value={block.heading ?? ""}
+                          onChange={(event) => updateWorkPlanBlock(index, { heading: event.target.value })}
+                          placeholder="Heading (optional)"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
                         />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">Price</label>
-                        <input
-                          value={pkg.price}
-                          onChange={(event) => updatePricing(index, { price: event.target.value })}
-                          className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold text-slate-500">Points</label>
-                        {pkg.points.map((point, pointIndex) => (
-                          <div key={`point-${index}-${pointIndex}`} className="flex items-center gap-2">
-                            <input
-                              value={point}
-                              onChange={(event) => updatePricingPoint(index, pointIndex, event.target.value)}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removePricingPoint(index, pointIndex)}
-                              className="text-xs font-semibold text-slate-500 hover:text-red-600"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
                         <button
                           type="button"
-                          onClick={() => addPricingPoint(index)}
-                          className="text-xs font-semibold text-brand-orange hover:text-orange-600"
+                          onClick={() => removeWorkPlanBlock(index)}
+                          className="text-xs font-semibold text-red-600 hover:text-red-700"
                         >
-                          + Add point
+                          Remove block
                         </button>
                       </div>
+                      <textarea
+                        rows={2}
+                        value={block.leadText ?? ""}
+                        onChange={(event) => updateWorkPlanBlock(index, { leadText: event.target.value })}
+                        placeholder="Lead text (optional)"
+                        className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                      />
+                      <div className="mt-3 space-y-2">
+                        {block.bullets.map((bullet, bulletIndex) => (
+                          <div key={`bullet-${index}-${bulletIndex}`} className="flex flex-col gap-2 md:flex-row md:items-center">
+                            <textarea
+                              rows={2}
+                              value={bullet.text}
+                              onChange={(event) => updateBullet(index, bulletIndex, { text: event.target.value })}
+                              placeholder="Bullet text"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={bullet.highlightColor || "#ffffff"}
+                                onChange={(event) => updateBullet(index, bulletIndex, { highlightColor: event.target.value })}
+                                className="h-9 w-10 cursor-pointer rounded border border-slate-200 bg-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => updateBullet(index, bulletIndex, { highlightColor: undefined })}
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                              >
+                                Clear
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveBullet(index, bulletIndex, "up")}
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                              >
+                                Up
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveBullet(index, bulletIndex, "down")}
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                              >
+                                Down
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeBullet(index, bulletIndex)}
+                                className="text-xs font-semibold text-slate-500 hover:text-red-600"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addBullet(index)}
+                        className="mt-3 text-xs font-semibold text-brand-orange hover:text-orange-600"
+                      >
+                        + Add bullet
+                      </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
 
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
-              <RichTextEditor
-                value={data.notesHtml}
-                onChange={(value) => setData((prev) => ({ ...prev, notesHtml: value }))}
-                dir={isRtl ? "rtl" : "ltr"}
-              />
-            </div>
+            {showPricing ? (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-slate-900">Pricing (3 packages)</h2>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {data.pricing.map((pkg, index) => (
+                    <div key={`pricing-${index}`} className="rounded-lg border border-slate-200 p-4">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-500">Package name</label>
+                          <input
+                            value={pkg.name}
+                            onChange={(event) => updatePricing(index, { name: event.target.value })}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-slate-500">Price</label>
+                          <input
+                            value={pkg.price}
+                            onChange={(event) => updatePricing(index, { price: event.target.value })}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold text-slate-500">Points</label>
+                          {pkg.points.map((point, pointIndex) => (
+                            <div key={`point-${index}-${pointIndex}`} className="flex items-center gap-2">
+                              <input
+                                value={point}
+                                onChange={(event) => updatePricingPoint(index, pointIndex, event.target.value)}
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removePricingPoint(index, pointIndex)}
+                                className="text-xs font-semibold text-slate-500 hover:text-red-600"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => addPricingPoint(index)}
+                            className="text-xs font-semibold text-brand-orange hover:text-orange-600"
+                          >
+                            + Add point
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {showNotes ? (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
+                <RichTextEditor
+                  value={data.notesHtml}
+                  onChange={(value) => setData((prev) => ({ ...prev, notesHtml: value }))}
+                  dir={isRtl ? "rtl" : "ltr"}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

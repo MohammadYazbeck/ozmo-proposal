@@ -13,6 +13,7 @@ type PublicProposalProps = {
     showWorkPlan: boolean;
     showPricing: boolean;
     showNotes: boolean;
+    expiresAt?: string | null;
   };
   dataEn: ProposalData;
   dataAr: ProposalData;
@@ -29,6 +30,11 @@ const labelsByLang: Record<
     pricing: string;
     notes: string;
     package: string;
+    offerEndsIn: string;
+    days: string;
+    hours: string;
+    minutes: string;
+    seconds: string;
     metaLabel: string;
   }
 > = {
@@ -39,6 +45,11 @@ const labelsByLang: Record<
     pricing: "Pricing",
     notes: "Notes",
     package: "Package",
+    offerEndsIn: "Offer ends in",
+    days: "Days",
+    hours: "Hours",
+    minutes: "Minutes",
+    seconds: "Seconds",
     metaLabel: "Proposal",
   },
   ar: {
@@ -48,12 +59,28 @@ const labelsByLang: Record<
     pricing: "الباقات",
     notes: "ملاحظات",
     package: "باقة",
+    offerEndsIn: "ينتهي العرض خلال",
+    days: "يوم",
+    hours: "ساعة",
+    minutes: "دقيقة",
+    seconds: "ثانية",
     metaLabel: "المقترح",
   },
 };
 
+const parseExpiresAt = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+};
+
 const cardClass =
-  "relative overflow-hidden rounded-2xl border border-white/10 bg-black/35 p-6 shadow-[0_25px_60px_rgba(0,0,0,0.55)] backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:border-brand-orange/40 hover:bg-black/45 after:absolute after:inset-x-0 after:top-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-brand-orange/60 after:to-transparent after:opacity-50";
+  "relative isolate z-0 overflow-hidden rounded-3xl border border-white/10 bg-black/60 p-6 shadow-[0_30px_80px_rgba(0,0,0,0.65)] backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-brand-orange/40 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.45),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.35),transparent_60%)] before:opacity-80 before:content-[''] after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(140deg,rgba(0,0,0,0.65),rgba(0,0,0,0.25))] after:content-['']";
 
 export const PublicProposal = ({
   proposal,
@@ -76,6 +103,10 @@ export const PublicProposal = ({
     [data.goals]
   );
   const pricing = useMemo(() => data.pricing.slice(0, 3), [data.pricing]);
+  const expiresAtDate = useMemo(
+    () => parseExpiresAt(proposal.expiresAt),
+    [proposal.expiresAt]
+  );
   const notesHtml = data.notesHtml.trim();
   const visionHtml = data.visionHtml.trim();
 
@@ -84,9 +115,9 @@ export const PublicProposal = ({
   const rowClass = isRtl
     ? "flex-row-reverse justify-end"
     : "flex-row justify-start";
-  const workPlanRowClass = "md:flex-row";
+  const workPlanRowClass = isRtl ? "md:flex-row-reverse" : "md:flex-row";
   const listDotClass = `flex items-start gap-2 `;
-  const listGoalClass = `flex items-start gap-3`;
+  const listGoalClass = `flex items-start gap-3 `;
   const sectionClass =
     "relative scroll-mt-24 pt-12 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/15 before:to-transparent";
   const phoneHref = "tel:+963982475910";
@@ -98,7 +129,32 @@ export const PublicProposal = ({
     setIsPlanOpen((prev) => !prev);
   };
   const planSpacerClass = isRtl ? "mr-auto" : "ml-auto";
-  const planHeaderClass = isRtl ? "flex-row text-right" : "flex-row text-left";
+  const planHeaderClass = isRtl
+    ? "flex-row-reverse text-right"
+    : "flex-row text-left";
+  const [timeLeftMs, setTimeLeftMs] = useState<number | null>(() => {
+    if (!expiresAtDate) {
+      return null;
+    }
+    return Math.max(0, expiresAtDate.getTime() - Date.now());
+  });
+  const countdown = useMemo(() => {
+    if (!timeLeftMs || timeLeftMs <= 0) {
+      return null;
+    }
+    const totalSeconds = Math.floor(timeLeftMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad2 = (value: number) => String(value).padStart(2, "0");
+    return {
+      days: String(days),
+      hours: pad2(hours),
+      minutes: pad2(minutes),
+      seconds: pad2(seconds),
+    };
+  }, [timeLeftMs]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -111,6 +167,20 @@ export const PublicProposal = ({
       html.setAttribute("lang", prevLang);
     };
   }, [currentLang, isRtl]);
+
+  useEffect(() => {
+    if (!expiresAtDate) {
+      setTimeLeftMs(null);
+      return;
+    }
+    const tick = () => {
+      const diff = expiresAtDate.getTime() - Date.now();
+      setTimeLeftMs(diff > 0 ? diff : 0);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAtDate]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black text-slate-100">
@@ -198,13 +268,15 @@ export const PublicProposal = ({
                   className={`${cardClass} animate-fade-up`}
                   style={{ animationDelay: "180ms" }}
                 >
-                  <h2 className="text-lg font-semibold tracking-tight text-white">
-                    {labels.vision}
-                  </h2>
-                  <div
-                    className={`prose prose-invert mt-3 max-w-none ${textAlign}`}
-                    dangerouslySetInnerHTML={{ __html: visionHtml }}
-                  />
+                  <div className="relative z-10">
+                    <h2 className="text-lg font-semibold tracking-tight text-white">
+                      {labels.vision}
+                    </h2>
+                    <div
+                      className={`prose prose-invert mt-3 max-w-none ${textAlign}`}
+                      dangerouslySetInnerHTML={{ __html: visionHtml }}
+                    />
+                  </div>
                 </div>
               ) : null}
 
@@ -213,20 +285,22 @@ export const PublicProposal = ({
                   className={`${cardClass} animate-fade-up`}
                   style={{ animationDelay: "240ms" }}
                 >
-                  <h2 className="text-lg font-semibold tracking-tight text-white">
-                    {labels.goals}
-                  </h2>
-                  <ul className={`mt-4 space-y-3 text-slate-200 ${textAlign}`}>
-                    {goals.map((goal, goalIndex) => (
-                      <li key={`goal-${goalIndex}`} className={listGoalClass}>
-                        <span
-                          className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
-                          aria-hidden="true"
-                        />
-                        <span>{goal}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="relative z-10">
+                    <h2 className="text-lg font-semibold tracking-tight text-white">
+                      {labels.goals}
+                    </h2>
+                    <ul className={`mt-4 space-y-3 text-slate-200`}>
+                      {goals.map((goal, goalIndex) => (
+                        <li key={`goal-${goalIndex}`} className={listGoalClass}>
+                          <span
+                            className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
+                            aria-hidden="true"
+                          />
+                          <span>{goal}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -239,10 +313,10 @@ export const PublicProposal = ({
                 onClick={togglePlan}
                 aria-expanded={isPlanOpen}
                 aria-controls="work-plan-content"
-                className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-brand-orange/40 ${planHeaderClass}`}
+                className={`flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-brand-orange/40 `}
               >
                 <span
-                  className={`text-2xl font-semibold tracking-tight text-white ${textAlign}`}
+                  className={`text-2xl font-semibold tracking-tight text-white`}
                 >
                   {labels.workPlan}
                 </span>
@@ -278,52 +352,54 @@ export const PublicProposal = ({
               >
                 {data.workPlan.map((block, blockIndex) => (
                   <div key={`work-${blockIndex}`} className={cardClass}>
-                    <div
-                      dir={`${isRtl ? "rtl" : "ltr"}`}
-                      className={`flex flex-col gap-3 md:items-start md:gap-6 ${workPlanRowClass} ${textAlign}`}
-                    >
-                      <div className="text-3xl font-semibold text-brand-orange">
-                        {block.number}
+                    <div className="relative z-10">
+                      <div
+                        dir={`${isRtl ? "rtl" : "ltr"}`}
+                        className={`flex flex-col gap-3 md:items-start md:gap-6 md:flex-row ${textAlign}`}
+                      >
+                        <div className="text-3xl font-semibold text-brand-orange">
+                          {block.number}
+                        </div>
+                        <div className={`space-y-2 `}>
+                          {block.heading ? (
+                            <h3 className="text-xl mt-1 font-semibold tracking-tight text-white">
+                              {block.heading}
+                            </h3>
+                          ) : null}
+                          {block.leadText ? (
+                            <p className="text-slate-300">{block.leadText}</p>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className={`space-y-2 ${textAlign}`}>
-                        {block.heading ? (
-                          <h3 className="text-xl font-semibold tracking-tight text-white">
-                            {block.heading}
-                          </h3>
-                        ) : null}
-                        {block.leadText ? (
-                          <p className="text-slate-300">{block.leadText}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                    <ul
-                      className={`mt-4 space-y-2 text-slate-200 ${textAlign}`}
-                    >
-                      {block.bullets
-                        .filter((bullet) => bullet.text.trim())
-                        .map((bullet, bulletIndex) => (
-                          <li
-                            key={`bullet-${blockIndex}-${bulletIndex}`}
-                            className={listDotClass}
-                          >
-                            <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-brand-orange" />
-                            <span
-                              className={`rounded px-1 ${
-                                bullet.highlightColor
-                                  ? "text-slate-900"
-                                  : "text-slate-200"
-                              }`}
-                              style={
-                                bullet.highlightColor
-                                  ? { backgroundColor: bullet.highlightColor }
-                                  : undefined
-                              }
+                      <ul
+                        className={`mt-4 space-y-2 text-slate-200 ${textAlign}`}
+                      >
+                        {block.bullets
+                          .filter((bullet) => bullet.text.trim())
+                          .map((bullet, bulletIndex) => (
+                            <li
+                              key={`bullet-${blockIndex}-${bulletIndex}`}
+                              className={listDotClass}
                             >
-                              {bullet.text}
-                            </span>
-                          </li>
-                        ))}
-                    </ul>
+                              <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-brand-orange" />
+                              <span
+                                className={`rounded px-1 ${
+                                  bullet.highlightColor
+                                    ? "text-slate-900"
+                                    : "text-slate-200"
+                                }`}
+                                style={
+                                  bullet.highlightColor
+                                    ? { backgroundColor: bullet.highlightColor }
+                                    : undefined
+                                }
+                              >
+                                {bullet.text}
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -340,43 +416,74 @@ export const PublicProposal = ({
               <div className="grid gap-4 lg:grid-cols-3">
                 {pricing.map((pkg, pkgIndex) => (
                   <div key={`pricing-${pkgIndex}`} className={cardClass}>
-                    <h3 className="text-lg font-semibold tracking-tight text-white">
-                      {pkg.name || `${labels.package} ${pkgIndex + 1}`}
-                    </h3>
-                    <p className="mt-2 text-2xl font-semibold text-brand-orange">
-                      {pkg.price || "--"}
-                    </p>
-                    <ul
-                      className={`mt-4 space-y-2 text-sm text-slate-300 ${textAlign}`}
-                    >
-                      {pkg.points
-                        .filter((point) => point.trim())
-                        .map((point, pointIndex) => (
-                          <li
-                            key={`point-${pkgIndex}-${pointIndex}`}
-                            className={listDotClass}
-                          >
-                            <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-brand-orange" />
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                    </ul>
+                    <div className="relative z-10">
+                      <h3 className="text-lg font-semibold tracking-tight text-white">
+                        {pkg.name || `${labels.package} ${pkgIndex + 1}`}
+                      </h3>
+                      <p className="mt-2 text-2xl font-semibold text-brand-orange">
+                        {pkg.price || "--"}
+                      </p>
+                      <ul
+                        className={`mt-4 space-y-2 text-sm text-slate-300 ${textAlign}`}
+                      >
+                        {pkg.points
+                          .filter((point) => point.trim())
+                          .map((point, pointIndex) => (
+                            <li
+                              key={`point-${pkgIndex}-${pointIndex}`}
+                              className={listDotClass}
+                            >
+                              <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-brand-orange" />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
                   </div>
                 ))}
               </div>
+              {expiresAtDate && countdown ? (
+                <div className={`mt-8 text-center`}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                    {labels.offerEndsIn}
+                  </p>
+                  <div className={`mt-4 flex flex-wrap gap-3 justify-center`}>
+                    {[
+                      { label: labels.days, value: countdown.days },
+                      { label: labels.hours, value: countdown.hours },
+                      { label: labels.minutes, value: countdown.minutes },
+                      { label: labels.seconds, value: countdown.seconds },
+                    ].map((unit) => (
+                      <div
+                        key={unit.label}
+                        className="flex min-w-[84px] flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-slate-200 shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur"
+                      >
+                        <span className="text-xl font-semibold text-white">
+                          {unit.value}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                          {unit.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
           {proposal.showNotes && notesHtml ? (
             <section className={`${sectionClass} space-y-6`}>
               <div className={cardClass}>
-                <h2 className="text-lg font-semibold tracking-tight text-white">
-                  {labels.notes}
-                </h2>
-                <div
-                  className={`prose prose-invert mt-3 max-w-none ${textAlign}`}
-                  dangerouslySetInnerHTML={{ __html: notesHtml }}
-                />
+                <div className="relative z-10">
+                  <h2 className="text-lg font-semibold tracking-tight text-white">
+                    {labels.notes}
+                  </h2>
+                  <div
+                    className={`prose prose-invert mt-3 max-w-none ${textAlign}`}
+                    dangerouslySetInnerHTML={{ __html: notesHtml }}
+                  />
+                </div>
               </div>
             </section>
           ) : null}

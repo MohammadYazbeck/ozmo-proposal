@@ -12,7 +12,8 @@ export default function NewProposalPage() {
         showGoals: true,
         showWorkPlan: true,
         showPricing: true,
-        showNotes: true
+        showNotes: true,
+        expiresAt: null
       }}
       initialDataEn={emptyProposalData()}
       initialDataAr={emptyProposalData()}

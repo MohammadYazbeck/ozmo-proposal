@@ -11,12 +11,15 @@ type SerializedProposal = {
   slug: string;
   status: ProposalStatus;
   updatedAt: string;
+  expiresAt?: string | null;
   dataEn: unknown;
   dataAr: unknown;
 };
 
 export const ProposalsTable = ({ proposals }: { proposals: SerializedProposal[] }) => {
   const [query, setQuery] = useState("");
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  const buildPublicUrl = (slug: string) => (baseUrl ? `${baseUrl}/p/${slug}` : `/p/${slug}`);
 
   const normalized = useMemo(
     () =>
@@ -66,6 +69,7 @@ export const ProposalsTable = ({ proposals }: { proposals: SerializedProposal[] 
                 <th className="py-3 pr-4 font-medium">Slug</th>
                 <th className="py-3 pr-4 font-medium">Status</th>
                 <th className="py-3 pr-4 font-medium">Updated</th>
+                <th className="py-3 pr-4 font-medium">Public Link</th>
                 <th className="py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -85,6 +89,16 @@ export const ProposalsTable = ({ proposals }: { proposals: SerializedProposal[] 
                     </span>
                   </td>
                   <td className="py-3 pr-4">{new Date(proposal.updatedAt).toLocaleString()}</td>
+                  <td className="py-3 pr-4">
+                    <a
+                      href={buildPublicUrl(proposal.slug)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:border-brand-orange hover:text-brand-orange"
+                    >
+                      View
+                    </a>
+                  </td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Link
@@ -124,7 +138,7 @@ export const ProposalsTable = ({ proposals }: { proposals: SerializedProposal[] 
               ))}
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-sm text-slate-500">
+                  <td colSpan={5} className="py-6 text-center text-sm text-slate-500">
                     No proposals found.
                   </td>
                 </tr>

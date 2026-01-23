@@ -23,7 +23,8 @@ export default async function EditProposalPage({ params }: { params: { id: strin
         showGoals: proposal.showGoals,
         showWorkPlan: proposal.showWorkPlan,
         showPricing: proposal.showPricing,
-        showNotes: proposal.showNotes
+        showNotes: proposal.showNotes,
+        expiresAt: proposal.expiresAt ? proposal.expiresAt.toISOString() : null
       }}
       initialDataEn={normalizeProposalData(proposal.dataEn)}
       initialDataAr={normalizeProposalData(proposal.dataAr)}

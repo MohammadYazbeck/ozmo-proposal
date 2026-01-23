@@ -14,7 +14,11 @@ export default async function PublicProposalPage({
   params: { slug: string };
 }) {
   const proposal = await getProposalBySlug(params.slug);
-  if (!proposal || proposal.status !== "PUBLISHED") {
+  if (
+    !proposal ||
+    proposal.status !== "PUBLISHED" ||
+    (proposal.expiresAt && proposal.expiresAt <= new Date())
+  ) {
     notFound();
   }
 
@@ -37,6 +41,9 @@ export default async function PublicProposalPage({
         showWorkPlan: proposal.showWorkPlan,
         showPricing: proposal.showPricing,
         showNotes: proposal.showNotes,
+        expiresAt: proposal.expiresAt
+          ? proposal.expiresAt.toISOString()
+          : null
       }}
       dataEn={dataEn}
       dataAr={dataAr}

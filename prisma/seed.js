@@ -192,6 +192,7 @@ async function main() {
       showWorkPlan: true,
       showPricing: true,
       showNotes: true,
+      expiresAt: null,
       dataEn: JSON.stringify(enData),
       dataAr: null
     }
@@ -206,6 +207,7 @@ async function main() {
       showWorkPlan: true,
       showPricing: true,
       showNotes: true,
+      expiresAt: null,
       dataEn: null,
       dataAr: JSON.stringify(arData)
     }

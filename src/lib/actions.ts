@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect";
 import { prisma } from "@/lib/db";
 import { createSession, clearSession, requireSession } from "@/lib/auth";
 import { normalizeProposalData, isLanguageAvailable } from "@/lib/proposal-data";
@@ -23,6 +24,17 @@ const parseJsonData = (value: FormDataEntryValue | null) => {
   }
 };
 
+const parseOptionalDate = (value: FormDataEntryValue | null) => {
+  if (!value || typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("Invalid disable date.");
+  }
+  return parsed;
+};
+
 
 const parseProposalFormData = (formData: FormData) => {
   const slugRaw = formData.get("slug")?.toString() ?? "";
@@ -37,6 +49,7 @@ const parseProposalFormData = (formData: FormData) => {
   const showWorkPlan = formData.get("showWorkPlan") === "on";
   const showPricing = formData.get("showPricing") === "on";
   const showNotes = formData.get("showNotes") === "on";
+  const expiresAt = parseOptionalDate(formData.get("expiresAt"));
 
   return {
     slug,
@@ -47,11 +60,17 @@ const parseProposalFormData = (formData: FormData) => {
     showGoals,
     showWorkPlan,
     showPricing,
-    showNotes
+    showNotes,
+    expiresAt
   };
 };
 
-const ensurePublishable = (status: string, dataEn: unknown, dataAr: unknown) => {
+const ensurePublishable = (
+  status: string,
+  dataEn: unknown,
+  dataAr: unknown,
+  expiresAt: Date | null
+) => {
   if (status !== "PUBLISHED") {
     return;
   }
@@ -59,6 +78,9 @@ const ensurePublishable = (status: string, dataEn: unknown, dataAr: unknown) => 
   const hasAr = isLanguageAvailable(dataAr as any);
   if (!hasEn && !hasAr) {
     throw new Error("Publishing requires a hero title in EN or AR.");
+  }
+  if (expiresAt && expiresAt <= new Date()) {
+    throw new Error("Disable date must be in the future.");
   }
 };
 
@@ -95,16 +117,39 @@ export const logoutAction = async () => {
 
 export const listProposals = async () => {
   await requireSession();
+  await prisma.proposal.updateMany({
+    where: {
+      status: "PUBLISHED",
+      expiresAt: { not: null, lte: new Date() }
+    },
+    data: { status: "DRAFT" }
+  });
   return prisma.proposal.findMany({ orderBy: { updatedAt: "desc" } });
 };
 
 export const getProposalById = async (id: string) => {
   await requireSession();
+  await prisma.proposal.updateMany({
+    where: {
+      id,
+      status: "PUBLISHED",
+      expiresAt: { not: null, lte: new Date() }
+    },
+    data: { status: "DRAFT" }
+  });
   return prisma.proposal.findUnique({ where: { id } });
 };
 
 export const getProposalBySlug = async (slug: string) => {
-  return prisma.proposal.findUnique({ where: { slug } });
+  const proposal = await prisma.proposal.findUnique({ where: { slug } });
+  if (!proposal) {
+    return null;
+  }
+  if (proposal.status === "PUBLISHED" && proposal.expiresAt && proposal.expiresAt <= new Date()) {
+    await prisma.proposal.update({ where: { id: proposal.id }, data: { status: "DRAFT" } });
+    return { ...proposal, status: "DRAFT" };
+  }
+  return proposal;
 };
 
 export const deleteProposal = async (formData: FormData) => {
@@ -124,7 +169,7 @@ export const createProposal = async (_prevState: ActionState, formData: FormData
     const parsed = parseProposalFormData(formData);
     const slug = slugSchema.parse(parsed.slug);
     await ensureSlugAvailable(slug);
-    ensurePublishable(parsed.status, parsed.dataEn, parsed.dataAr);
+    ensurePublishable(parsed.status, parsed.dataEn, parsed.dataAr, parsed.expiresAt);
 
     const proposal = await prisma.proposal.create({
       data: {
@@ -135,6 +180,7 @@ export const createProposal = async (_prevState: ActionState, formData: FormData
         showWorkPlan: parsed.showWorkPlan,
         showPricing: parsed.showPricing,
         showNotes: parsed.showNotes,
+        expiresAt: parsed.expiresAt,
         dataEn: JSON.stringify(parsed.dataEn),
         dataAr: JSON.stringify(parsed.dataAr)
       }
@@ -143,6 +189,9 @@ export const createProposal = async (_prevState: ActionState, formData: FormData
     revalidatePath("/dashboard/proposals");
     redirect(`/dashboard/proposals/${proposal.id}/edit`);
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
     return { error: error instanceof Error ? error.message : "Unable to create proposal." };
   }
 };
@@ -158,7 +207,7 @@ export const updateProposal = async (_prevState: ActionState, formData: FormData
     const parsed = parseProposalFormData(formData);
     const slug = slugSchema.parse(parsed.slug);
     await ensureSlugAvailable(slug, id);
-    ensurePublishable(parsed.status, parsed.dataEn, parsed.dataAr);
+    ensurePublishable(parsed.status, parsed.dataEn, parsed.dataAr, parsed.expiresAt);
 
     await prisma.proposal.update({
       where: { id },
@@ -170,6 +219,7 @@ export const updateProposal = async (_prevState: ActionState, formData: FormData
         showWorkPlan: parsed.showWorkPlan,
         showPricing: parsed.showPricing,
         showNotes: parsed.showNotes,
+        expiresAt: parsed.expiresAt,
         dataEn: JSON.stringify(parsed.dataEn),
         dataAr: JSON.stringify(parsed.dataAr)
       }
@@ -179,6 +229,9 @@ export const updateProposal = async (_prevState: ActionState, formData: FormData
     revalidatePath(`/dashboard/proposals/${id}/edit`);
     return { message: "Saved." };
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
     return { error: error instanceof Error ? error.message : "Unable to update proposal." };
   }
 };
@@ -215,6 +268,7 @@ export const duplicateProposal = async (formData: FormData) => {
       showWorkPlan: existing.showWorkPlan,
       showPricing: existing.showPricing,
       showNotes: existing.showNotes,
+      expiresAt: existing.expiresAt,
       dataEn: existing.dataEn,
       dataAr: existing.dataAr
     }
