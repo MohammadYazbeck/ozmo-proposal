@@ -38,6 +38,7 @@ export default async function PublicProposalPage({
         slug: proposal.slug,
         showVision: proposal.showVision,
         showGoals: proposal.showGoals,
+        showNoticed: proposal.showNoticed,
         showWorkPlan: proposal.showWorkPlan,
         showPricing: proposal.showPricing,
         showNotes: proposal.showNotes,

@@ -24,6 +24,7 @@ export type ProposalData = {
   };
   visionHtml: string;
   goals: string[];
+  noticed: string[];
   workPlan: WorkPlanBlock[];
   pricing: PricingPackage[];
   notesHtml: string;
@@ -48,6 +49,7 @@ export const emptyProposalData = (): ProposalData => ({
   hero: { title: "", subtitle: "", introduction: "" },
   visionHtml: "",
   goals: [""],
+  noticed: [""],
   workPlan: Array.from({ length: 6 }, (_, index) => ({
     number: index + 1,
     heading: "",
@@ -91,6 +93,8 @@ export const normalizeProposalData = (input: unknown): ProposalData => {
 
   const goals = stringArray(data.goals);
   const normalizedGoals = hasOwn(data, "goals") ? goals : base.goals;
+  const noticed = stringArray(data.noticed);
+  const normalizedNoticed = hasOwn(data, "noticed") ? noticed : base.noticed;
 
   const hasWorkPlan = hasOwn(data, "workPlan") && Array.isArray(data.workPlan);
   const workPlanSource = hasWorkPlan ? (data.workPlan as unknown[]) : base.workPlan;
@@ -120,6 +124,7 @@ export const normalizeProposalData = (input: unknown): ProposalData => {
     hero,
     visionHtml: stringValue(data.visionHtml),
     goals: normalizedGoals,
+    noticed: normalizedNoticed,
     workPlan,
     pricing,
     notesHtml: stringValue(data.notesHtml)

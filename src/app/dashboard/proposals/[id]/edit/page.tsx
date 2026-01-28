@@ -21,6 +21,7 @@ export default async function EditProposalPage({ params }: { params: { id: strin
         status: statusSchema.parse(proposal.status),
         showVision: proposal.showVision,
         showGoals: proposal.showGoals,
+        showNoticed: proposal.showNoticed,
         showWorkPlan: proposal.showWorkPlan,
         showPricing: proposal.showPricing,
         showNotes: proposal.showNotes,

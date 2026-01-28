@@ -17,6 +17,7 @@ model Proposal {
   showWorkPlan Boolean        @default(true)
   showPricing  Boolean        @default(true)
   showNotes    Boolean        @default(true)
+  showNoticed  Boolean        @default(false)
   expiresAt    DateTime?
   dataEn       String?
   dataAr       String?

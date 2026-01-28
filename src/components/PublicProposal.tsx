@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ProposalData } from "@/lib/proposal-data";
+import Link from "next/link";
 
 type LangKey = "en" | "ar";
 
@@ -10,6 +11,7 @@ type PublicProposalProps = {
     slug: string;
     showVision: boolean;
     showGoals: boolean;
+    showNoticed: boolean;
     showWorkPlan: boolean;
     showPricing: boolean;
     showNotes: boolean;
@@ -35,6 +37,8 @@ const labelsByLang: Record<
     hours: string;
     minutes: string;
     seconds: string;
+    noticedTitle: string;
+    noticedSubtitle: string;
     metaLabel: string;
   }
 > = {
@@ -50,6 +54,8 @@ const labelsByLang: Record<
     hours: "Hours",
     minutes: "Minutes",
     seconds: "Seconds",
+    noticedTitle: "What we have noticed",
+    noticedSubtitle: "Key observations after reviewing the account.",
     metaLabel: "Proposal",
   },
   ar: {
@@ -64,6 +70,8 @@ const labelsByLang: Record<
     hours: "ساعة",
     minutes: "دقيقة",
     seconds: "ثانية",
+    noticedTitle: "ما لاحظناه",
+    noticedSubtitle: "أهم الملاحظات بعد مراجعة الحساب.",
     metaLabel: "المقترح",
   },
 };
@@ -101,6 +109,10 @@ export const PublicProposal = ({
   const goals = useMemo(
     () => data.goals.filter((goal) => goal.trim()),
     [data.goals]
+  );
+  const noticed = useMemo(
+    () => data.noticed.filter((item) => item.trim()),
+    [data.noticed]
   );
   const pricing = useMemo(() => data.pricing.slice(0, 3), [data.pricing]);
   const expiresAtDate = useMemo(
@@ -305,6 +317,32 @@ export const PublicProposal = ({
               ) : null}
             </div>
           </section>
+
+          {proposal.showNoticed && noticed.length ? (
+            <section className={`${sectionClass} space-y-6`}>
+              <div className={cardClass}>
+                <div className="relative z-10">
+                  <h2 className="text-lg font-semibold tracking-tight text-white">
+                    {labels.noticedTitle}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {labels.noticedSubtitle}
+                  </p>
+                  <ul className={`mt-4 space-y-3 text-slate-200 ${textAlign}`}>
+                    {noticed.map((item, index) => (
+                      <li key={`noticed-${index}`} className={listGoalClass}>
+                        <span
+                          className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
+                          aria-hidden="true"
+                        />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           {proposal.showWorkPlan ? (
             <section className={`${sectionClass} space-y-6`}>

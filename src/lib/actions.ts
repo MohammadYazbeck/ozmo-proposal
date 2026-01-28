@@ -49,6 +49,7 @@ const parseProposalFormData = (formData: FormData) => {
   const showWorkPlan = formData.get("showWorkPlan") === "on";
   const showPricing = formData.get("showPricing") === "on";
   const showNotes = formData.get("showNotes") === "on";
+  const showNoticed = formData.get("showNoticed") === "on";
   const expiresAt = parseOptionalDate(formData.get("expiresAt"));
 
   return {
@@ -61,6 +62,7 @@ const parseProposalFormData = (formData: FormData) => {
     showWorkPlan,
     showPricing,
     showNotes,
+    showNoticed,
     expiresAt
   };
 };
@@ -180,6 +182,7 @@ export const createProposal = async (_prevState: ActionState, formData: FormData
         showWorkPlan: parsed.showWorkPlan,
         showPricing: parsed.showPricing,
         showNotes: parsed.showNotes,
+        showNoticed: parsed.showNoticed,
         expiresAt: parsed.expiresAt,
         dataEn: JSON.stringify(parsed.dataEn),
         dataAr: JSON.stringify(parsed.dataAr)
@@ -219,6 +222,7 @@ export const updateProposal = async (_prevState: ActionState, formData: FormData
         showWorkPlan: parsed.showWorkPlan,
         showPricing: parsed.showPricing,
         showNotes: parsed.showNotes,
+        showNoticed: parsed.showNoticed,
         expiresAt: parsed.expiresAt,
         dataEn: JSON.stringify(parsed.dataEn),
         dataAr: JSON.stringify(parsed.dataAr)
@@ -268,6 +272,7 @@ export const duplicateProposal = async (formData: FormData) => {
       showWorkPlan: existing.showWorkPlan,
       showPricing: existing.showPricing,
       showNotes: existing.showNotes,
+      showNoticed: existing.showNoticed,
       expiresAt: existing.expiresAt,
       dataEn: existing.dataEn,
       dataAr: existing.dataAr

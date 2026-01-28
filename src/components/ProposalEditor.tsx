@@ -17,6 +17,7 @@ type EditorProposal = {
   showWorkPlan?: boolean;
   showPricing?: boolean;
   showNotes?: boolean;
+  showNoticed?: boolean;
   expiresAt?: string | Date | null;
 };
 
@@ -65,7 +66,8 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
     showGoals: proposal?.showGoals ?? true,
     showWorkPlan: proposal?.showWorkPlan ?? true,
     showPricing: proposal?.showPricing ?? true,
-    showNotes: proposal?.showNotes ?? true
+    showNotes: proposal?.showNotes ?? true,
+    showNoticed: proposal?.showNoticed ?? false
   });
 
   const defaultLang = useMemo(() => {
@@ -98,6 +100,7 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
   const publicUrl = slug ? (baseUrl ? `${baseUrl}/p/${slug}` : `/p/${slug}`) : "";
   const showVision = visibility.showVision;
   const showGoals = visibility.showGoals;
+  const showNoticed = visibility.showNoticed;
   const showWorkPlan = visibility.showWorkPlan;
   const showPricing = visibility.showPricing;
   const showNotes = visibility.showNotes;
@@ -123,6 +126,25 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
     setData((prev) => {
       const goals = prev.goals.filter((_, idx) => idx !== index);
       return { ...prev, goals };
+    });
+  };
+
+  const updateNoticed = (index: number, value: string) => {
+    setData((prev) => {
+      const noticed = [...prev.noticed];
+      noticed[index] = value;
+      return { ...prev, noticed };
+    });
+  };
+
+  const addNoticed = () => {
+    setData((prev) => ({ ...prev, noticed: [...prev.noticed, ""] }));
+  };
+
+  const removeNoticed = (index: number) => {
+    setData((prev) => {
+      const noticed = prev.noticed.filter((_, idx) => idx !== index);
+      return { ...prev, noticed };
     });
   };
 
@@ -384,6 +406,17 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
+                  name="showNoticed"
+                  checked={visibility.showNoticed}
+                  onChange={(event) =>
+                    setVisibility((prev) => ({ ...prev, showNoticed: event.target.checked }))
+                  }
+                />
+                Show What we have noticed
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
                   name="showWorkPlan"
                   checked={visibility.showWorkPlan}
                   onChange={(event) =>
@@ -537,6 +570,41 @@ export const ProposalEditor = ({ mode, proposal, initialDataEn, initialDataAr }:
                     </button>
                   </div>
                 ) : null}
+              </div>
+            ) : null}
+
+            {showNoticed ? (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-slate-900">What we have noticed</h2>
+                <div className="space-y-2">
+                  {data.noticed.map((item, index) => (
+                    <div key={`noticed-${index}`} className="flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-orange"
+                        aria-hidden="true"
+                      />
+                      <input
+                        value={item}
+                        onChange={(event) => updateNoticed(index, event.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeNoticed(index)}
+                        className="text-xs font-semibold text-slate-500 hover:text-red-600"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addNoticed}
+                  className="text-xs font-semibold text-brand-orange hover:text-orange-600"
+                >
+                  + Add point
+                </button>
               </div>
             ) : null}
 

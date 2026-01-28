@@ -10,6 +10,7 @@ export default function NewProposalPage() {
         status: "DRAFT",
         showVision: true,
         showGoals: true,
+        showNoticed: false,
         showWorkPlan: true,
         showPricing: true,
         showNotes: true,
