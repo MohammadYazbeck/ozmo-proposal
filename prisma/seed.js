@@ -181,7 +181,15 @@ const arData = {
 };
 
 async function main() {
-  await prisma.proposal.deleteMany();
+  const proposalCount = await prisma.proposal.count();
+  let progressCount = 0;
+  if (prisma.progress) {
+    progressCount = await prisma.progress.count();
+  }
+  if (proposalCount > 0 || progressCount > 0) {
+    console.log("Seed skipped: existing data found.");
+    return;
+  }
 
   await prisma.proposal.create({
     data: {

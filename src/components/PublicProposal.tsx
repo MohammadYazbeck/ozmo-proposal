@@ -128,6 +128,7 @@ export const PublicProposal = ({
     ? "flex-row-reverse justify-end"
     : "flex-row justify-start";
   const workPlanRowClass = isRtl ? "md:flex-row-reverse" : "md:flex-row";
+  const workPlanAlignClass = isRtl ? "md:items-end" : "md:items-start";
   const listDotClass = `flex items-start gap-2 `;
   const listGoalClass = `flex items-start gap-3 `;
   const sectionClass =
@@ -167,6 +168,36 @@ export const PublicProposal = ({
       seconds: pad2(seconds),
     };
   }, [timeLeftMs]);
+
+  useEffect(() => {
+    if (singleLanguage) {
+      return;
+    }
+    try {
+      const stored = window.localStorage.getItem(
+        `ozmo:proposal:lang:${proposal.slug}`
+      );
+      if (stored === "en" || stored === "ar") {
+        setActiveLang(stored);
+      }
+    } catch {
+      // ignore storage access errors
+    }
+  }, [proposal.slug, singleLanguage]);
+
+  useEffect(() => {
+    if (singleLanguage) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        `ozmo:proposal:lang:${proposal.slug}`,
+        currentLang
+      );
+    } catch {
+      // ignore storage access errors
+    }
+  }, [currentLang, proposal.slug, singleLanguage]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -393,12 +424,12 @@ export const PublicProposal = ({
                     <div className="relative z-10">
                       <div
                         dir={`${isRtl ? "rtl" : "ltr"}`}
-                        className={`flex flex-col gap-3 md:items-start md:gap-6 md:flex-row ${textAlign}`}
+                        className={`flex flex-col gap-3 md:gap-6 ${workPlanRowClass} ${workPlanAlignClass}`}
                       >
                         <div className="text-3xl font-semibold text-brand-orange">
                           {block.number}
                         </div>
-                        <div className={`space-y-2 `}>
+                        <div className={`space-y-2 ${textAlign}`}>
                           {block.heading ? (
                             <h3 className="text-xl mt-1 font-semibold tracking-tight text-white">
                               {block.heading}
@@ -417,11 +448,11 @@ export const PublicProposal = ({
                           .map((bullet, bulletIndex) => (
                             <li
                               key={`bullet-${blockIndex}-${bulletIndex}`}
-                              className={listDotClass}
+                              className={`${listDotClass} ${rowClass}`}
                             >
                               <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-brand-orange" />
                               <span
-                                className={`rounded px-1 ${
+                                className={`rounded px-1 ${textAlign} ${
                                   bullet.highlightColor
                                     ? "text-slate-900"
                                     : "text-slate-200"

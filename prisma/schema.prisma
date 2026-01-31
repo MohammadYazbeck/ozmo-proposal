@@ -24,3 +24,20 @@ model Proposal {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
+
+model Progress {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  status             String   @default("DRAFT")
+  accessPasswordHash String?
+  showClient         Boolean  @default(true)
+  showPlan           Boolean  @default(true)
+  showCalendar       Boolean  @default(true)
+  showAssets         Boolean  @default(false)
+  showPayments       Boolean  @default(true)
+  showMetaAds        Boolean  @default(true)
+  dataEn             String?
+  dataAr             String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}

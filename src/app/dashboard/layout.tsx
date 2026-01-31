@@ -10,7 +10,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-around gap-4 px-6 py-4">
           <Link href="/dashboard/proposals" className="flex items-center gap-2">
             <Image
               src="/logo.png"
@@ -23,13 +23,21 @@ export default function DashboardLayout({
               OZMO
             </span>
           </Link>
-          <div className="flex items-center gap-3 text-sm font-semibold">
+          <div className="flex font-semibold text-sm hover:text-orange-600">
             <Link
               href="/dashboard/proposals"
               className="rounded-lg px-3 py-2 text-slate-600 transition hover:text-brand-orange"
             >
               Proposals
             </Link>
+            <Link
+              href="/dashboard/progress"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:text-brand-orange"
+            >
+              Work Plan Progress
+            </Link>
+          </div>
+          <div className="flex items-center gap-3 text-sm font-semibold">
             <form action={logoutAction}>
               <button
                 type="submit"
