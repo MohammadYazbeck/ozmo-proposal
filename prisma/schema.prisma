@@ -41,3 +41,18 @@ model Progress {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
+
+model MetaPage {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  status             String   @default("DRAFT")
+  accessPasswordHash String?
+  showClient         Boolean  @default(true)
+  showWallet         Boolean  @default(true)
+  showResults        Boolean  @default(true)
+  showPlan           Boolean  @default(true)
+  dataEn             String?
+  dataAr             String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}

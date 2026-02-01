@@ -36,6 +36,12 @@ export default function DashboardLayout({
             >
               Work Plan Progress
             </Link>
+            <Link
+              href="/dashboard/meta"
+              className="rounded-lg px-3 py-2 text-slate-600 transition hover:text-brand-orange"
+            >
+              Meta Ads
+            </Link>
           </div>
           <div className="flex items-center gap-3 text-sm font-semibold">
             <form action={logoutAction}>

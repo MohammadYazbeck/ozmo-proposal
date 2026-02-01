@@ -183,10 +183,14 @@ const arData = {
 async function main() {
   const proposalCount = await prisma.proposal.count();
   let progressCount = 0;
+  let metaCount = 0;
   if (prisma.progress) {
     progressCount = await prisma.progress.count();
   }
-  if (proposalCount > 0 || progressCount > 0) {
+  if (prisma.metaPage) {
+    metaCount = await prisma.metaPage.count();
+  }
+  if (proposalCount > 0 || progressCount > 0 || metaCount > 0) {
     console.log("Seed skipped: existing data found.");
     return;
   }

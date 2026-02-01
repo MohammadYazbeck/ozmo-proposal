@@ -183,6 +183,7 @@ export const PublicProgress = ({
   const progressAngle = Math.round(progressRatio * 360);
   const phoneHref = "tel:+963982475910";
   const whatsappHref = "https://wa.me/+963982475910";
+  const instagramHref = "https://www.instagram.com/ozmoagency/";
 
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -193,9 +194,9 @@ export const PublicProgress = ({
   const [offset, setOffset] = useState(0);
 
   const nextIndex = useMemo(() => {
-    const now = new Date();
+    const now = Date.now();
     const upcomingIndex = calendarItems.findIndex(
-      (item) => item.parsed && item.parsed >= now
+      (item) => item.parsed && item.parsed.getTime() >= now
     );
     if (upcomingIndex >= 0) {
       return upcomingIndex;
@@ -203,8 +204,11 @@ export const PublicProgress = ({
     return calendarItems.length ? calendarItems.length - 1 : -1;
   }, [calendarItems]);
   const nextDate = nextIndex >= 0 ? calendarItems[nextIndex]?.parsed : null;
+  const nextTime = nextDate ? nextDate.getTime() : null;
   const isNextUp =
-    !!nextDate && nextDate >= new Date() && currentIndex === nextIndex;
+    typeof nextTime === "number" &&
+    nextTime >= Date.now() &&
+    currentIndex === nextIndex;
 
   useEffect(() => {
     if (nextIndex >= 0) {
@@ -717,6 +721,22 @@ export const PublicProgress = ({
             aria-label="WhatsApp"
           >
             <path d="M12.04 0C5.39 0 .16 5.33.16 11.9c0 2.09.55 4.13 1.59 5.94L0 24l6.31-1.65a11.86 11.86 0 0 0 5.69 1.45h.01c6.65 0 11.99-5.33 11.99-11.9A11.86 11.86 0 0 0 12.04 0zm0 21.79h-.01a9.85 9.85 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.84 9.84 0 1 1 8.38 4.63zm5.43-7.41c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.06 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.19 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.69.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z" />
+          </svg>
+        </a>
+        <a
+          href={instagramHref}
+          className={floatingButtonClass}
+          aria-label="Instagram"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-6 w-6 text-brand-orange"
+            fill="currentColor"
+          >
+            <path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm10 2H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-5 3.5A4.5 4.5 0 1 1 7.5 13 4.5 4.5 0 0 1 12 8.5zm0 2A2.5 2.5 0 1 0 14.5 13 2.5 2.5 0 0 0 12 10.5zm5.25-3.75a1.25 1.25 0 1 1-1.25 1.25 1.25 1.25 0 0 1 1.25-1.25z" />
           </svg>
         </a>
         {progress.showAssets && data.assetsUrl ? (
