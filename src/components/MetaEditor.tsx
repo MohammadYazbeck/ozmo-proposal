@@ -83,11 +83,21 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
   };
 
   const updateWallet = (value: string) => {
-    setData((prev) => ({ ...prev, walletBalance: value }));
+    setData((prev) => ({
+      ...prev,
+      walletBalance: value,
+      walletUpdatedAt: new Date().toISOString()
+    }));
   };
 
   const updateResults = (field: keyof MetaResults, value: string) => {
-    setData((prev) => ({ ...prev, results: { ...prev.results, [field]: value } }));
+    setData((prev) => {
+      const next = { ...prev.results, [field]: value };
+      if (field === "amountSpent") {
+        next.amountSpentUpdatedAt = new Date().toISOString();
+      }
+      return { ...prev, results: next };
+    });
   };
 
   const updatePlanTitle = (value: string) => {

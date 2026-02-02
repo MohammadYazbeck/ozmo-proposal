@@ -34,6 +34,7 @@ const labelsByLang: Record<
     followers: string;
     amountSpent: string;
     timeDays: string;
+    lastUpdated: string;
   }
 > = {
   en: {
@@ -49,6 +50,7 @@ const labelsByLang: Record<
     followers: "Followers earned",
     amountSpent: "Amount spent",
     timeDays: "Time (days)",
+    lastUpdated: "Last updated",
   },
   ar: {
     client: "العميل",
@@ -63,6 +65,7 @@ const labelsByLang: Record<
     followers: "متابعون جدد",
     amountSpent: "المبلغ المصروف",
     timeDays: "المدة (أيام)",
+    lastUpdated: "آخر تحديث",
   },
 };
 
@@ -101,6 +104,22 @@ export const PublicMeta = ({
     () => data.plan.points.filter((point) => point.trim()),
     [data.plan.points]
   );
+  const formatUpdated = (value: string) => {
+    if (!value) {
+      return "";
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return "";
+    }
+    return parsed.toLocaleDateString(currentLang === "ar" ? "ar" : "en", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+  const walletUpdatedLabel = formatUpdated(data.walletUpdatedAt);
+  const amountUpdatedLabel = formatUpdated(data.results.amountSpentUpdatedAt);
   const whatsappPlanMessage = useMemo(() => {
     const title = data.plan.title || labels.plan;
     const points = planPoints.length
@@ -255,6 +274,11 @@ export const PublicMeta = ({
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                     USD
                   </p>
+                  {walletUpdatedLabel ? (
+                    <p className="text-xs text-slate-400">
+                      {labels.lastUpdated}: {walletUpdatedLabel}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </section>
@@ -279,6 +303,7 @@ export const PublicMeta = ({
                     label: labels.amountSpent,
                     value: data.results.amountSpent,
                     suffix: "USD",
+                    updated: amountUpdatedLabel,
                   },
                   { label: labels.timeDays, value: data.results.timeDays },
                 ].map((item) => (
@@ -297,6 +322,11 @@ export const PublicMeta = ({
                           </span>
                         ) : null}
                       </p>
+                      {item.updated ? (
+                        <p className="text-xs text-slate-400">
+                          {labels.lastUpdated}: {item.updated}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ))}

@@ -5,6 +5,7 @@ export type MetaResults = {
   followers: string;
   amountSpent: string;
   timeDays: string;
+  amountSpentUpdatedAt: string;
 };
 
 export type MetaPlan = {
@@ -18,6 +19,7 @@ export type MetaData = {
     description: string;
   };
   walletBalance: string;
+  walletUpdatedAt: string;
   results: MetaResults;
   plan: MetaPlan;
 };
@@ -32,17 +34,19 @@ const hasOwn = (value: object, key: string) =>
 export const emptyMetaData = (): MetaData => ({
   client: { name: "", description: "" },
   walletBalance: "",
+  walletUpdatedAt: "",
   results: {
     reach: "",
     messages: "",
     campaigns: "",
     followers: "",
     amountSpent: "",
-    timeDays: ""
+    timeDays: "",
+    amountSpentUpdatedAt: ""
   },
   plan: {
     title: "",
-    points: [""],
+    points: [""]
   }
 });
 
@@ -73,6 +77,7 @@ export const normalizeMetaData = (input: unknown): MetaData => {
   };
 
   const walletBalance = stringValue((data as MetaData).walletBalance);
+  const walletUpdatedAt = stringValue((data as MetaData).walletUpdatedAt);
 
   const results = {
     reach: stringValue(data.results?.reach),
@@ -80,7 +85,8 @@ export const normalizeMetaData = (input: unknown): MetaData => {
     campaigns: stringValue(data.results?.campaigns),
     followers: stringValue(data.results?.followers),
     amountSpent: stringValue(data.results?.amountSpent),
-    timeDays: stringValue(data.results?.timeDays)
+    timeDays: stringValue(data.results?.timeDays),
+    amountSpentUpdatedAt: stringValue(data.results?.amountSpentUpdatedAt)
   };
 
   const plan = {
@@ -93,6 +99,7 @@ export const normalizeMetaData = (input: unknown): MetaData => {
   return {
     client,
     walletBalance,
+    walletUpdatedAt,
     results,
     plan
   };
