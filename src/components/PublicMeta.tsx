@@ -35,6 +35,9 @@ const labelsByLang: Record<
     amountSpent: string;
     timeDays: string;
     lastUpdated: string;
+    mediaButton: string;
+    linkButton: string;
+    linksLabel: string;
   }
 > = {
   en: {
@@ -51,6 +54,9 @@ const labelsByLang: Record<
     amountSpent: "Amount spent",
     timeDays: "Time (days)",
     lastUpdated: "Last updated",
+    mediaButton: "View file",
+    linkButton: "Open link",
+    linksLabel: "Links",
   },
   ar: {
     client: "العميل",
@@ -66,6 +72,9 @@ const labelsByLang: Record<
     amountSpent: "المبلغ المصروف",
     timeDays: "المدة (أيام)",
     lastUpdated: "آخر تحديث",
+    mediaButton: "عرض الملف",
+    linkButton: "فتح الرابط",
+    linksLabel: "روابط",
   },
 };
 
@@ -99,6 +108,8 @@ export const PublicMeta = ({
   const phoneHref = "tel:+963982475910";
   const whatsappBase = "https://wa.me/+963982475910";
   const instagramHref = "https://www.instagram.com/ozmoagency/";
+  const ctaButtonClass =
+    "inline-flex items-center gap-2 rounded-full border border-brand-orange/40 bg-black/70 px-8 py-4 text-sm font-semibold text-brand-orange transition hover:border-brand-orange hover:bg-black/80";
 
   const planPoints = useMemo(
     () => data.plan.points.filter((point) => point.trim()),
@@ -137,6 +148,10 @@ export const PublicMeta = ({
   const whatsappPlanHref = `${whatsappBase}?text=${encodeURIComponent(
     whatsappPlanMessage
   )}`;
+  const mediaButtonLabel = data.results.mediaLabel?.trim() || labels.mediaButton;
+  const linkButtonLabel = data.results.linkLabel?.trim() || labels.linkButton;
+  const hasMediaButton = Boolean(data.results.mediaUrl?.trim());
+  const hasLinkButton = Boolean(data.results.linkUrl?.trim());
 
   useEffect(() => {
     if (singleLanguage) {
@@ -331,6 +346,35 @@ export const PublicMeta = ({
                   </div>
                 ))}
               </div>
+              {hasMediaButton || hasLinkButton ? (
+                <div className={`mt-6 ${textAlign}`}>
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                    {labels.linksLabel}
+                  </p>
+                  <div className={`mt-3 flex flex-wrap items-center gap-3 ${rowClass}`}>
+                  {hasMediaButton ? (
+                    <a
+                      href={data.results.mediaUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={ctaButtonClass}
+                    >
+                      {mediaButtonLabel}
+                    </a>
+                  ) : null}
+                  {hasLinkButton ? (
+                    <a
+                      href={data.results.linkUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={ctaButtonClass}
+                    >
+                      {linkButtonLabel}
+                    </a>
+                  ) : null}
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -360,14 +404,16 @@ export const PublicMeta = ({
                       ))}
                     </ul>
                   ) : null}
-                  <a
-                    href={whatsappPlanHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:border-brand-orange/40 ${rowBetweenClass}`}
-                  >
-                    {labels.orderPlan}
-                  </a>
+                  <div className={`mt-5 flex ${rowClass}`}>
+                    <a
+                      href={whatsappPlanHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={ctaButtonClass}
+                    >
+                      {labels.orderPlan}
+                    </a>
+                  </div>
                 </div>
               </div>
             </section>

@@ -425,7 +425,7 @@ export const PublicProposal = ({
                     <div className="relative z-10">
                       <div
                         dir={`${isRtl ? "rtl" : "ltr"}`}
-                        className={`flex flex-col gap-3 md:gap-6 ${workPlanRowClass} ${workPlanAlignClass}`}
+                        className={`flex flex-col md:flex-row gap-3 md:gap-6 ${workPlanAlignClass}`}
                       >
                         <div className="text-3xl font-semibold text-brand-orange">
                           {block.number}
@@ -449,7 +449,7 @@ export const PublicProposal = ({
                           .map((bullet, bulletIndex) => (
                             <li
                               key={`bullet-${blockIndex}-${bulletIndex}`}
-                              className={`${listDotClass} ${rowClass}`}
+                              className={`${listDotClass} `}
                             >
                               <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-brand-orange" />
                               <span

@@ -51,6 +51,8 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
     showResults: meta?.showResults ?? true,
     showPlan: meta?.showPlan ?? true
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   const defaultLang = useMemo(() => {
     if (isMetaAvailable(initialDataEn)) {
@@ -100,6 +102,10 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
     });
   };
 
+  const setResults = (values: Partial<MetaResults>) => {
+    setData((prev) => ({ ...prev, results: { ...prev.results, ...values } }));
+  };
+
   const updatePlanTitle = (value: string) => {
     setData((prev) => ({ ...prev, plan: { ...prev.plan, title: value } }));
   };
@@ -124,6 +130,54 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
       ...prev,
       plan: { ...prev.plan, points: prev.plan.points.filter((_, idx) => idx !== index) }
     }));
+  };
+
+  const removeUploadedFile = async (url: string) => {
+    try {
+      await fetch("/api/uploads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+    } catch {
+      // ignore cleanup errors
+    }
+  };
+
+  const uploadResultImage = async (file: File) => {
+    setUploadError("");
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/uploads", { method: "POST", body: formData });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to upload image.");
+      }
+      const url = payload?.url;
+      if (!url || typeof url !== "string") {
+        throw new Error("Upload failed.");
+      }
+      const previous = data.results.mediaUrl;
+      setResults({ mediaUrl: url });
+      if (previous && previous !== url) {
+        void removeUploadedFile(previous);
+      }
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Unable to upload image.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeResultImage = async () => {
+    const existing = data.results.mediaUrl;
+    if (!existing) {
+      return;
+    }
+    setResults({ mediaUrl: "" });
+    await removeUploadedFile(existing);
   };
 
   return (
@@ -384,6 +438,73 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
                     <input
                       value={data.results.timeDays}
                       onChange={(event) => updateResults("timeDays", event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Image button label</label>
+                    <input
+                      value={data.results.mediaLabel}
+                      onChange={(event) => updateResults("mediaLabel", event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Link button label</label>
+                    <input
+                      value={data.results.linkLabel}
+                      onChange={(event) => updateResults("linkLabel", event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-slate-700">Image file</label>
+                    <div className="mt-1 flex flex-wrap items-center gap-3">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isUploading}
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) {
+                            return;
+                          }
+                          await uploadResultImage(file);
+                          event.target.value = "";
+                        }}
+                        className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200"
+                      />
+                      {data.results.mediaUrl ? (
+                        <>
+                          <a
+                            href={data.results.mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-semibold text-brand-orange hover:text-orange-600"
+                          >
+                            View
+                          </a>
+                          <button
+                            type="button"
+                            onClick={removeResultImage}
+                            className="text-xs font-semibold text-slate-500 hover:text-red-600"
+                          >
+                            Remove
+                          </button>
+                        </>
+                      ) : null}
+                      {isUploading ? <span className="text-xs text-slate-500">Uploading...</span> : null}
+                    </div>
+                    {uploadError ? <p className="text-xs text-red-600">{uploadError}</p> : null}
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-slate-700">Link URL</label>
+                    <input
+                      value={data.results.linkUrl}
+                      onChange={(event) => updateResults("linkUrl", event.target.value)}
+                      placeholder="https://"
                       className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
                     />
                   </div>

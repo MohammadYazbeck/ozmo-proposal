@@ -6,6 +6,10 @@ export type MetaResults = {
   amountSpent: string;
   timeDays: string;
   amountSpentUpdatedAt: string;
+  mediaUrl: string;
+  mediaLabel: string;
+  linkUrl: string;
+  linkLabel: string;
 };
 
 export type MetaPlan = {
@@ -42,7 +46,11 @@ export const emptyMetaData = (): MetaData => ({
     followers: "",
     amountSpent: "",
     timeDays: "",
-    amountSpentUpdatedAt: ""
+    amountSpentUpdatedAt: "",
+    mediaUrl: "",
+    mediaLabel: "",
+    linkUrl: "",
+    linkLabel: ""
   },
   plan: {
     title: "",
@@ -86,7 +94,11 @@ export const normalizeMetaData = (input: unknown): MetaData => {
     followers: stringValue(data.results?.followers),
     amountSpent: stringValue(data.results?.amountSpent),
     timeDays: stringValue(data.results?.timeDays),
-    amountSpentUpdatedAt: stringValue(data.results?.amountSpentUpdatedAt)
+    amountSpentUpdatedAt: stringValue(data.results?.amountSpentUpdatedAt),
+    mediaUrl: stringValue(data.results?.mediaUrl),
+    mediaLabel: stringValue(data.results?.mediaLabel),
+    linkUrl: stringValue(data.results?.linkUrl),
+    linkLabel: stringValue(data.results?.linkLabel)
   };
 
   const plan = {

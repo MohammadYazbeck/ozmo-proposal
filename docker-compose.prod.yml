@@ -9,8 +9,10 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_APP_URL: https://proposal.ozmo.media
       DATABASE_URL: file:/data/dev.db
+      UPLOAD_DIR: /app/public/uploads
     volumes:
       - /srv/projects/ozmo-proposal/data:/data
+      - /srv/projects/ozmo-proposal/uploads:/app/public/uploads
     networks:
       - web
     labels:
