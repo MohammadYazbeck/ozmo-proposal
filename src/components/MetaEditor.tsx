@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { createMeta, deleteMeta, updateMeta } from "@/lib/meta-actions";
-import type { MetaData, MetaResults } from "@/lib/meta-data";
+import type {
+  MetaAd,
+  MetaAdMetrics,
+  MetaAdSet,
+  MetaCampaign,
+  MetaData,
+  MetaResults
+} from "@/lib/meta-data";
 import { isMetaAvailable } from "@/lib/meta-data";
 import type { ProposalStatus } from "@/lib/validation";
 
@@ -41,9 +48,67 @@ const SaveButton = ({ label }: { label: string }) => {
   );
 };
 
+const emptyAdMetrics = (): MetaAdMetrics => ({
+  reach: "",
+  messages: "",
+  followers: "",
+  amountSpent: "",
+  timeDays: ""
+});
+
+const emptyAd = (): MetaAd => ({ name: "", metrics: emptyAdMetrics() });
+const emptyAdSet = (): MetaAdSet => ({ name: "", ads: [emptyAd()] });
+const emptyCampaign = (): MetaCampaign => ({ name: "", adSets: [emptyAdSet()] });
+
+const seedCampaignItems = (data: MetaData): MetaData => {
+  if (data.results.campaignItems?.length) {
+    return data;
+  }
+  const hasLegacy = [
+    data.results.reach,
+    data.results.messages,
+    data.results.followers,
+    data.results.amountSpent,
+    data.results.timeDays
+  ].some((value) => value?.trim());
+  if (!hasLegacy) {
+    return data;
+  }
+  return {
+    ...data,
+    results: {
+      ...data.results,
+      campaignItems: [
+        {
+          name: "",
+          adSets: [
+            {
+              name: "",
+              ads: [
+                {
+                  name: "",
+                  metrics: {
+                    reach: data.results.reach,
+                    messages: data.results.messages,
+                    followers: data.results.followers,
+                    amountSpent: data.results.amountSpent,
+                    timeDays: data.results.timeDays
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  };
+};
+
 export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEditorProps) => {
-  const [dataEn, setDataEn] = useState<MetaData>(initialDataEn);
-  const [dataAr, setDataAr] = useState<MetaData>(initialDataAr);
+  const seededEn = useMemo(() => seedCampaignItems(initialDataEn), [initialDataEn]);
+  const seededAr = useMemo(() => seedCampaignItems(initialDataAr), [initialDataAr]);
+  const [dataEn, setDataEn] = useState<MetaData>(seededEn);
+  const [dataAr, setDataAr] = useState<MetaData>(seededAr);
   const [slug, setSlug] = useState(meta?.slug ?? "");
   const [visibility, setVisibility] = useState({
     showClient: meta?.showClient ?? true,
@@ -51,6 +116,8 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
     showResults: meta?.showResults ?? true,
     showPlan: meta?.showPlan ?? true
   });
+  const [openCampaigns, setOpenCampaigns] = useState<Record<number, boolean>>({});
+  const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
@@ -79,6 +146,7 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
   const isRtl = activeLang === "ar";
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
   const publicUrl = slug ? (baseUrl ? `${baseUrl}/meta/${slug}` : `/meta/${slug}`) : "";
+  const rowBetweenClass = isRtl ? "flex-row-reverse" : "flex-row";
 
   const updateClient = (field: "name" | "description", value: string) => {
     setData((prev) => ({ ...prev, client: { ...prev.client, [field]: value } }));
@@ -105,6 +173,207 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
   const setResults = (values: Partial<MetaResults>) => {
     setData((prev) => ({ ...prev, results: { ...prev.results, ...values } }));
   };
+
+  const updateCampaignItems = (
+    updater: (items: MetaCampaign[]) => MetaCampaign[],
+    updateAmountSpent?: boolean
+  ) => {
+    setData((prev) => {
+      const nextItems = updater(prev.results.campaignItems ?? []);
+      return {
+        ...prev,
+        results: {
+          ...prev.results,
+          campaignItems: nextItems,
+          amountSpentUpdatedAt: updateAmountSpent
+            ? new Date().toISOString()
+            : prev.results.amountSpentUpdatedAt
+        }
+      };
+    });
+  };
+
+  const addCampaign = () => {
+    updateCampaignItems((items) => [...items, emptyCampaign()]);
+  };
+
+  const removeCampaign = (campaignIndex: number) => {
+    updateCampaignItems((items) => items.filter((_, idx) => idx !== campaignIndex));
+  };
+
+  const updateCampaignName = (campaignIndex: number, value: string) => {
+    updateCampaignItems((items) =>
+      items.map((campaign, idx) =>
+        idx === campaignIndex ? { ...campaign, name: value } : campaign
+      )
+    );
+  };
+
+  const addAdSet = (campaignIndex: number) => {
+    updateCampaignItems((items) =>
+      items.map((campaign, idx) =>
+        idx === campaignIndex
+          ? { ...campaign, adSets: [...campaign.adSets, emptyAdSet()] }
+          : campaign
+      )
+    );
+  };
+
+  const removeAdSet = (campaignIndex: number, adSetIndex: number) => {
+    updateCampaignItems((items) =>
+      items.map((campaign, idx) =>
+        idx === campaignIndex
+          ? {
+              ...campaign,
+              adSets: campaign.adSets.filter((_, setIdx) => setIdx !== adSetIndex)
+            }
+          : campaign
+      )
+    );
+  };
+
+  const updateAdSetName = (campaignIndex: number, adSetIndex: number, value: string) => {
+    updateCampaignItems((items) =>
+      items.map((campaign, idx) => {
+        if (idx !== campaignIndex) {
+          return campaign;
+        }
+        const adSets = campaign.adSets.map((adSet, setIdx) =>
+          setIdx === adSetIndex ? { ...adSet, name: value } : adSet
+        );
+        return { ...campaign, adSets };
+      })
+    );
+  };
+
+  const addAd = (campaignIndex: number, adSetIndex: number) => {
+    updateCampaignItems((items) =>
+      items.map((campaign, idx) => {
+        if (idx !== campaignIndex) {
+          return campaign;
+        }
+        const adSets = campaign.adSets.map((adSet, setIdx) =>
+          setIdx === adSetIndex ? { ...adSet, ads: [...adSet.ads, emptyAd()] } : adSet
+        );
+        return { ...campaign, adSets };
+      })
+    );
+  };
+
+  const removeAd = (campaignIndex: number, adSetIndex: number, adIndex: number) => {
+    updateCampaignItems((items) =>
+      items.map((campaign, idx) => {
+        if (idx !== campaignIndex) {
+          return campaign;
+        }
+        const adSets = campaign.adSets.map((adSet, setIdx) => {
+          if (setIdx !== adSetIndex) {
+            return adSet;
+          }
+          return { ...adSet, ads: adSet.ads.filter((_, aIdx) => aIdx !== adIndex) };
+        });
+        return { ...campaign, adSets };
+      })
+    );
+  };
+
+  const updateAdName = (
+    campaignIndex: number,
+    adSetIndex: number,
+    adIndex: number,
+    value: string
+  ) => {
+    updateCampaignItems((items) =>
+      items.map((campaign, idx) => {
+        if (idx !== campaignIndex) {
+          return campaign;
+        }
+        const adSets = campaign.adSets.map((adSet, setIdx) => {
+          if (setIdx !== adSetIndex) {
+            return adSet;
+          }
+          const ads = adSet.ads.map((ad, aIdx) =>
+            aIdx === adIndex ? { ...ad, name: value } : ad
+          );
+          return { ...adSet, ads };
+        });
+        return { ...campaign, adSets };
+      })
+    );
+  };
+
+  const updateAdMetric = (
+    campaignIndex: number,
+    adSetIndex: number,
+    adIndex: number,
+    field: keyof MetaAdMetrics,
+    value: string
+  ) => {
+    updateCampaignItems(
+      (items) =>
+        items.map((campaign, idx) => {
+          if (idx !== campaignIndex) {
+            return campaign;
+          }
+          const adSets = campaign.adSets.map((adSet, setIdx) => {
+            if (setIdx !== adSetIndex) {
+              return adSet;
+            }
+            const ads = adSet.ads.map((ad, aIdx) => {
+              if (aIdx !== adIndex) {
+                return ad;
+              }
+              return { ...ad, metrics: { ...ad.metrics, [field]: value } };
+            });
+            return { ...adSet, ads };
+          });
+          return { ...campaign, adSets };
+        }),
+      field === "amountSpent"
+    );
+  };
+
+  const parseMetric = (value: string) => {
+    const cleaned = value.replace(/[, ]/g, "");
+    const number = Number(cleaned);
+    return Number.isFinite(number) ? number : 0;
+  };
+
+  const sumMetrics = (metricsList: MetaAdMetrics[]) =>
+    metricsList.reduce(
+      (acc, metrics) => ({
+        reach: acc.reach + parseMetric(metrics.reach),
+        messages: acc.messages + parseMetric(metrics.messages),
+        followers: acc.followers + parseMetric(metrics.followers),
+        amountSpent: acc.amountSpent + parseMetric(metrics.amountSpent),
+        timeDays: acc.timeDays + parseMetric(metrics.timeDays)
+      }),
+      { reach: 0, messages: 0, followers: 0, amountSpent: 0, timeDays: 0 }
+    );
+
+  const sumAdSetMetrics = (adSet: MetaAdSet) =>
+    sumMetrics(adSet.ads.map((ad) => ad.metrics));
+
+  const sumCampaignMetrics = (campaign: MetaCampaign) =>
+    sumMetrics(campaign.adSets.flatMap((adSet) => adSet.ads.map((ad) => ad.metrics)));
+
+  const campaignItems = data.results.campaignItems ?? [];
+  const totalCampaigns = campaignItems.length;
+  const totalAdSets = campaignItems.reduce((acc, campaign) => acc + campaign.adSets.length, 0);
+  const totalAds = campaignItems.reduce(
+    (acc, campaign) =>
+      acc + campaign.adSets.reduce((inner, adSet) => inner + adSet.ads.length, 0),
+    0
+  );
+  const totalMetrics = sumMetrics(
+    campaignItems
+      .flatMap((campaign) => campaign.adSets)
+      .flatMap((adSet) => adSet.ads)
+      .map((ad) => ad.metrics)
+  );
+
+  const formatNumber = (value: number) =>
+    value.toLocaleString(activeLang === "ar" ? "ar" : "en");
 
   const updatePlanTitle = (value: string) => {
     setData((prev) => ({ ...prev, plan: { ...prev.plan, title: value } }));
@@ -392,55 +661,325 @@ export const MetaEditor = ({ mode, meta, initialDataEn, initialDataAr }: MetaEdi
             {visibility.showResults ? (
               <div className="space-y-3">
                 <h2 className="text-lg font-semibold text-slate-900">Campaign Results</h2>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Reach</label>
-                    <input
-                      value={data.results.reach}
-                      onChange={(event) => updateResults("reach", event.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                    />
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Total results
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full border border-orange-200/70 bg-orange-50 px-2 py-1 text-orange-700">
+                        {formatNumber(totalCampaigns)} campaigns
+                      </span>
+                      <span className="rounded-full border border-amber-200/70 bg-amber-50 px-2 py-1 text-amber-700">
+                        {formatNumber(totalAdSets)} ad sets
+                      </span>
+                      <span className="rounded-full border border-sky-200/70 bg-sky-50 px-2 py-1 text-sky-700">
+                        {formatNumber(totalAds)} ads
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Messages</label>
-                    <input
-                      value={data.results.messages}
-                      onChange={(event) => updateResults("messages", event.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                    />
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {[
+                      { label: "Reach", value: formatNumber(totalMetrics.reach) },
+                      { label: "Messages", value: formatNumber(totalMetrics.messages) },
+                      { label: "Campaigns", value: formatNumber(totalCampaigns) },
+                      { label: "Followers earned", value: formatNumber(totalMetrics.followers) },
+                      {
+                        label: "Amount spent (USD)",
+                        value: formatNumber(totalMetrics.amountSpent)
+                      },
+                      { label: "Time (days)", value: formatNumber(totalMetrics.timeDays) }
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                      >
+                        <div className="text-xs text-slate-500">{item.label}</div>
+                        <div className="text-base font-semibold text-slate-900">
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Campaigns</label>
-                    <input
-                      value={data.results.campaigns}
-                      onChange={(event) => updateResults("campaigns", event.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Followers earned</label>
-                    <input
-                      value={data.results.followers}
-                      onChange={(event) => updateResults("followers", event.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Amount spent (USD)</label>
-                    <input
-                      value={data.results.amountSpent}
-                      onChange={(event) => updateResults("amountSpent", event.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Time (days)</label>
-                    <input
-                      value={data.results.timeDays}
-                      onChange={(event) => updateResults("timeDays", event.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
-                    />
-                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {campaignItems.map((campaign, campaignIndex) => {
+                    const campaignTotals = sumCampaignMetrics(campaign);
+                    return (
+                      <div
+                        key={`campaign-${campaignIndex}`}
+                        className="rounded-xl border border-orange-200/70 bg-orange-50/70 p-4 shadow-sm"
+                      >
+                        <div
+                          className={`flex flex-wrap items-start justify-between gap-3 ${rowBetweenClass}`}
+                        >
+                          <div className="min-w-[220px] flex-1">
+                            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                              Campaign name
+                            </label>
+                            <input
+                              value={campaign.name}
+                              onChange={(event) => updateCampaignName(campaignIndex, event.target.value)}
+                              placeholder={`Campaign ${campaignIndex + 1}`}
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                            <span>Reach: {formatNumber(campaignTotals.reach)}</span>
+                            <span>Messages: {formatNumber(campaignTotals.messages)}</span>
+                            <span>Followers: {formatNumber(campaignTotals.followers)}</span>
+                            <span>Spent: {formatNumber(campaignTotals.amountSpent)}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenCampaigns((prev) => ({
+                                  ...prev,
+                                  [campaignIndex]: !(prev[campaignIndex] ?? true)
+                                }))
+                              }
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-brand-orange hover:text-brand-orange"
+                            >
+                              {openCampaigns[campaignIndex] ?? true ? "Collapse" : "Expand"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeCampaign(campaignIndex)}
+                              className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-700"
+                            >
+                              Remove campaign
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          className={`mt-4 space-y-4 overflow-hidden border-t border-orange-200/70 pt-4 ${
+                            openCampaigns[campaignIndex] ?? true
+                              ? "max-h-[5000px] opacity-100"
+                              : "max-h-0 opacity-0"
+                          }`}
+                        >
+                          {campaign.adSets.map((adSet, adSetIndex) => {
+                            const adSetTotals = sumAdSetMetrics(adSet);
+                            const adSetKey = `${campaignIndex}-${adSetIndex}`;
+                            return (
+                              <div
+                                key={`campaign-${campaignIndex}-adset-${adSetIndex}`}
+                                className="rounded-xl border border-amber-200/70 bg-amber-50/70 p-4"
+                              >
+                                <div className={`flex flex-wrap items-start justify-between gap-3 ${rowBetweenClass}`}>
+                                  <div className="min-w-[200px] flex-1">
+                                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                      Ad set name
+                                    </label>
+                                    <input
+                                      value={adSet.name}
+                                      onChange={(event) =>
+                                        updateAdSetName(
+                                          campaignIndex,
+                                          adSetIndex,
+                                          event.target.value
+                                        )
+                                      }
+                                      placeholder={`Ad set ${adSetIndex + 1}`}
+                                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                                    />
+                                  </div>
+                                  <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                                    <span>Reach: {formatNumber(adSetTotals.reach)}</span>
+                                    <span>Messages: {formatNumber(adSetTotals.messages)}</span>
+                                    <span>Followers: {formatNumber(adSetTotals.followers)}</span>
+                                    <span>Spent: {formatNumber(adSetTotals.amountSpent)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setOpenAdSets((prev) => ({
+                                          ...prev,
+                                          [adSetKey]: !(prev[adSetKey] ?? true)
+                                        }))
+                                      }
+                                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-brand-orange hover:text-brand-orange"
+                                    >
+                                      {openAdSets[adSetKey] ?? true ? "Collapse" : "Expand"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeAdSet(campaignIndex, adSetIndex)}
+                                      className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-700"
+                                    >
+                                      Remove ad set
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div
+                                  className={`mt-4 space-y-3 overflow-hidden border-t border-amber-200/70 pt-4 ${
+                                    openAdSets[adSetKey] ?? true
+                                      ? "max-h-[4000px] opacity-100"
+                                      : "max-h-0 opacity-0"
+                                  }`}
+                                >
+                                  {adSet.ads.map((ad, adIndex) => (
+                                    <div
+                                      key={`campaign-${campaignIndex}-adset-${adSetIndex}-ad-${adIndex}`}
+                                      className="rounded-lg border border-sky-200/70 bg-sky-50/70 p-3"
+                                    >
+                                      <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div className="min-w-[200px] flex-1">
+                                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                            Ad name
+                                          </label>
+                                          <input
+                                            value={ad.name}
+                                            onChange={(event) =>
+                                              updateAdName(
+                                                campaignIndex,
+                                                adSetIndex,
+                                                adIndex,
+                                                event.target.value
+                                              )
+                                            }
+                                            placeholder={`Ad ${adIndex + 1}`}
+                                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            removeAd(campaignIndex, adSetIndex, adIndex)
+                                          }
+                                          className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-700"
+                                        >
+                                          Remove ad
+                                        </button>
+                                      </div>
+                                      <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                                        <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                            Reach
+                                          </label>
+                                          <input
+                                            value={ad.metrics.reach}
+                                            onChange={(event) =>
+                                              updateAdMetric(
+                                                campaignIndex,
+                                                adSetIndex,
+                                                adIndex,
+                                                "reach",
+                                                event.target.value
+                                              )
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                            Messages
+                                          </label>
+                                          <input
+                                            value={ad.metrics.messages}
+                                            onChange={(event) =>
+                                              updateAdMetric(
+                                                campaignIndex,
+                                                adSetIndex,
+                                                adIndex,
+                                                "messages",
+                                                event.target.value
+                                              )
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                            Followers earned
+                                          </label>
+                                          <input
+                                            value={ad.metrics.followers}
+                                            onChange={(event) =>
+                                              updateAdMetric(
+                                                campaignIndex,
+                                                adSetIndex,
+                                                adIndex,
+                                                "followers",
+                                                event.target.value
+                                              )
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                            Amount spent (USD)
+                                          </label>
+                                          <input
+                                            value={ad.metrics.amountSpent}
+                                            onChange={(event) =>
+                                              updateAdMetric(
+                                                campaignIndex,
+                                                adSetIndex,
+                                                adIndex,
+                                                "amountSpent",
+                                                event.target.value
+                                              )
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-slate-700">
+                                            Time (days)
+                                          </label>
+                                          <input
+                                            value={ad.metrics.timeDays}
+                                            onChange={(event) =>
+                                              updateAdMetric(
+                                                campaignIndex,
+                                                adSetIndex,
+                                                adIndex,
+                                                "timeDays",
+                                                event.target.value
+                                              )
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-orange focus:outline-none"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => addAd(campaignIndex, adSetIndex)}
+                                    className="rounded-full border border-brand-orange/40 bg-white px-3 py-1 text-xs font-semibold text-brand-orange transition hover:border-brand-orange hover:bg-orange-50"
+                                  >
+                                    + Add ad
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => addAdSet(campaignIndex)}
+                            className="rounded-full border border-brand-orange/40 bg-white px-3 py-1 text-xs font-semibold text-brand-orange transition hover:border-brand-orange hover:bg-orange-50"
+                          >
+                            + Add ad set
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={addCampaign}
+                    className="rounded-full border border-brand-orange/40 bg-white px-3 py-1 text-xs font-semibold text-brand-orange transition hover:border-brand-orange hover:bg-orange-50"
+                  >
+                    + Add campaign
+                  </button>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <div>

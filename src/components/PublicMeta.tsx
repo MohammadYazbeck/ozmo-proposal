@@ -38,6 +38,10 @@ const labelsByLang: Record<
     mediaButton: string;
     linkButton: string;
     linksLabel: string;
+    breakdownLabel: string;
+    campaignLabel: string;
+    adSetLabel: string;
+    adLabel: string;
   }
 > = {
   en: {
@@ -57,6 +61,10 @@ const labelsByLang: Record<
     mediaButton: "View file",
     linkButton: "Open link",
     linksLabel: "Links",
+    breakdownLabel: "Campaign breakdown",
+    campaignLabel: "Campaign",
+    adSetLabel: "Ad set",
+    adLabel: "Ad",
   },
   ar: {
     client: "العميل",
@@ -75,6 +83,10 @@ const labelsByLang: Record<
     mediaButton: "عرض الملف",
     linkButton: "فتح الرابط",
     linksLabel: "روابط",
+    breakdownLabel: "تفاصيل الحملات",
+    campaignLabel: "حملة",
+    adSetLabel: "مجموعة إعلانات",
+    adLabel: "إعلان",
   },
 };
 
@@ -105,6 +117,9 @@ export const PublicMeta = ({
     : "flex-row justify-start";
   const rowBetweenClass = isRtl ? "flex-row-reverse" : "flex-row";
   const suffixClass = isRtl ? "mr-2" : "ml-2";
+  const edgeSide = isRtl ? "border-r-4 pr-4" : "border-l-4 pl-4";
+  const metricPillClass =
+    "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-slate-300";
   const phoneHref = "tel:+963982475910";
   const whatsappBase = "https://wa.me/+963982475910";
   const instagramHref = "https://www.instagram.com/ozmoagency/";
@@ -148,10 +163,64 @@ export const PublicMeta = ({
   const whatsappPlanHref = `${whatsappBase}?text=${encodeURIComponent(
     whatsappPlanMessage
   )}`;
-  const mediaButtonLabel = data.results.mediaLabel?.trim() || labels.mediaButton;
+  const mediaButtonLabel =
+    data.results.mediaLabel?.trim() || labels.mediaButton;
   const linkButtonLabel = data.results.linkLabel?.trim() || labels.linkButton;
   const hasMediaButton = Boolean(data.results.mediaUrl?.trim());
   const hasLinkButton = Boolean(data.results.linkUrl?.trim());
+  const campaignItems = data.results.campaignItems ?? [];
+  const hasCampaignItems = campaignItems.length > 0;
+  const parseMetric = (value: string) => {
+    const cleaned = value.replace(/[, ]/g, "");
+    const number = Number(cleaned);
+    return Number.isFinite(number) ? number : 0;
+  };
+  const sumMetrics = (
+    metricsList: Array<{
+      reach: string;
+      messages: string;
+      followers: string;
+      amountSpent: string;
+      timeDays: string;
+    }>
+  ) =>
+    metricsList.reduce(
+      (acc, metrics) => ({
+        reach: acc.reach + parseMetric(metrics.reach),
+        messages: acc.messages + parseMetric(metrics.messages),
+        followers: acc.followers + parseMetric(metrics.followers),
+        amountSpent: acc.amountSpent + parseMetric(metrics.amountSpent),
+        timeDays: acc.timeDays + parseMetric(metrics.timeDays),
+      }),
+      { reach: 0, messages: 0, followers: 0, amountSpent: 0, timeDays: 0 }
+    );
+  const sumAdSet = (adSet: { ads: Array<{ metrics: any }> }) =>
+    sumMetrics(adSet.ads.map((ad) => ad.metrics));
+  const sumCampaign = (campaign: {
+    adSets: Array<{ ads: Array<{ metrics: any }> }>;
+  }) =>
+    sumMetrics(
+      campaign.adSets.flatMap((adSet) => adSet.ads.map((ad) => ad.metrics))
+    );
+  const totalMetrics = hasCampaignItems
+    ? sumMetrics(
+        campaignItems
+          .flatMap((campaign) => campaign.adSets)
+          .flatMap((adSet) => adSet.ads)
+          .map((ad) => ad.metrics)
+      )
+    : {
+        reach: parseMetric(data.results.reach),
+        messages: parseMetric(data.results.messages),
+        followers: parseMetric(data.results.followers),
+        amountSpent: parseMetric(data.results.amountSpent),
+        timeDays: parseMetric(data.results.timeDays),
+      };
+  const totalCampaignCount = hasCampaignItems
+    ? campaignItems.length
+    : parseMetric(data.results.campaigns);
+  const formatMetric = (value: number) =>
+    value.toLocaleString(currentLang === "ar" ? "ar" : "en");
 
   useEffect(() => {
     if (singleLanguage) {
@@ -308,19 +377,31 @@ export const PublicMeta = ({
                 {[
                   {
                     label: labels.reach,
-                    value: data.results.reach,
+                    value: formatMetric(totalMetrics.reach),
                     suffix: labels.reachUnit,
                   },
-                  { label: labels.messages, value: data.results.messages },
-                  { label: labels.campaigns, value: data.results.campaigns },
-                  { label: labels.followers, value: data.results.followers },
+                  {
+                    label: labels.messages,
+                    value: formatMetric(totalMetrics.messages),
+                  },
+                  {
+                    label: labels.campaigns,
+                    value: formatMetric(totalCampaignCount),
+                  },
+                  {
+                    label: labels.followers,
+                    value: formatMetric(totalMetrics.followers),
+                  },
                   {
                     label: labels.amountSpent,
-                    value: data.results.amountSpent,
+                    value: formatMetric(totalMetrics.amountSpent),
                     suffix: "USD",
                     updated: amountUpdatedLabel,
                   },
-                  { label: labels.timeDays, value: data.results.timeDays },
+                  {
+                    label: labels.timeDays,
+                    value: formatMetric(totalMetrics.timeDays),
+                  },
                 ].map((item) => (
                   <div key={item.label} className={cardClass}>
                     <div className="relative z-10 space-y-2">
@@ -346,32 +427,225 @@ export const PublicMeta = ({
                   </div>
                 ))}
               </div>
+
+              {hasCampaignItems ? (
+                <div className="mt-8 space-y-3">
+                  <p className="text-xs uppercase  tracking-[0.3em] text-slate-400">
+                    {labels.breakdownLabel}
+                  </p>
+                  {campaignItems.map((campaign, campaignIndex) => {
+                    const campaignTotals = sumCampaign(campaign);
+                    const campaignName =
+                      campaign.name?.trim() ||
+                      `${labels.campaignLabel} ${campaignIndex + 1}`;
+                    return (
+                      <details
+                        key={`campaign-${campaignIndex}`}
+                        className="rounded-2xl border border-white/10 bg-black/60 p-0"
+                      >
+                        <summary
+                          className={`flex cursor-pointer list-none flex-wrap items-start justify-between gap-3 px-5 py-4 `}
+                        >
+                          <div
+                            className={`flex flex-col gap-2 ${edgeSide} border-brand-orange/60`}
+                          >
+                            <span className="text-sm font-semibold text-white">
+                              {campaignName}
+                            </span>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <span className={metricPillClass}>
+                                {labels.reach}{" "}
+                                <span className="text-slate-100">
+                                  {formatMetric(campaignTotals.reach)}
+                                </span>
+                              </span>
+                              <span className={metricPillClass}>
+                                {labels.messages}{" "}
+                                <span className="text-slate-100">
+                                  {formatMetric(campaignTotals.messages)}
+                                </span>
+                              </span>
+                              <span className={metricPillClass}>
+                                {labels.followers}{" "}
+                                <span className="text-slate-100">
+                                  {formatMetric(campaignTotals.followers)}
+                                </span>
+                              </span>
+                              <span className={metricPillClass}>
+                                {labels.amountSpent}{" "}
+                                <span className="text-slate-100">
+                                  {formatMetric(campaignTotals.amountSpent)}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-orange/70">
+                            📌
+                          </span>
+                        </summary>
+                        <div className="border-t border-white/5 px-5 py-4">
+                          <div className="space-y-3">
+                            {campaign.adSets.map((adSet, adSetIndex) => {
+                              const adSetTotals = sumAdSet(adSet);
+                              const adSetName =
+                                adSet.name?.trim() ||
+                                `${labels.adSetLabel} ${adSetIndex + 1}`;
+                              return (
+                                <div
+                                  key={`campaign-${campaignIndex}-adset-${adSetIndex}`}
+                                  className="rounded-xl border border-white/10 bg-black/40 p-4"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div
+                                      className={`flex flex-col gap-2 ${edgeSide} border-amber-500/50`}
+                                    >
+                                      <span className="text-sm font-semibold text-white">
+                                        {adSetName}
+                                      </span>
+                                      <div className="flex flex-wrap gap-2 text-xs">
+                                        <span className={metricPillClass}>
+                                          {labels.reach}{" "}
+                                          <span className="text-slate-100">
+                                            {formatMetric(adSetTotals.reach)}
+                                          </span>
+                                        </span>
+                                        <span className={metricPillClass}>
+                                          {labels.messages}{" "}
+                                          <span className="text-slate-100">
+                                            {formatMetric(adSetTotals.messages)}
+                                          </span>
+                                        </span>
+                                        <span className={metricPillClass}>
+                                          {labels.followers}{" "}
+                                          <span className="text-slate-100">
+                                            {formatMetric(
+                                              adSetTotals.followers
+                                            )}
+                                          </span>
+                                        </span>
+                                        <span className={metricPillClass}>
+                                          {labels.amountSpent}{" "}
+                                          <span className="text-slate-100">
+                                            {formatMetric(
+                                              adSetTotals.amountSpent
+                                            )}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3 space-y-2">
+                                    {adSet.ads.map((ad, adIndex) => {
+                                      const adName =
+                                        ad.name?.trim() ||
+                                        `${labels.adLabel} ${adIndex + 1}`;
+                                      return (
+                                        <div
+                                          key={`campaign-${campaignIndex}-adset-${adSetIndex}-ad-${adIndex}`}
+                                          className="rounded-lg border border-white/10 bg-black/70 p-3"
+                                        >
+                                          <div
+                                            className={`flex flex-col gap-2 ${edgeSide} border-sky-400/40`}
+                                          >
+                                            <span className="text-sm font-semibold text-white">
+                                              {adName}
+                                            </span>
+                                            <div className="flex flex-wrap gap-2 text-xs">
+                                              <span className={metricPillClass}>
+                                                {labels.reach}{" "}
+                                                <span className="text-slate-100">
+                                                  {formatMetric(
+                                                    parseMetric(
+                                                      ad.metrics.reach
+                                                    )
+                                                  )}
+                                                </span>
+                                              </span>
+                                              <span className={metricPillClass}>
+                                                {labels.messages}{" "}
+                                                <span className="text-slate-100">
+                                                  {formatMetric(
+                                                    parseMetric(
+                                                      ad.metrics.messages
+                                                    )
+                                                  )}
+                                                </span>
+                                              </span>
+                                              <span className={metricPillClass}>
+                                                {labels.followers}{" "}
+                                                <span className="text-slate-100">
+                                                  {formatMetric(
+                                                    parseMetric(
+                                                      ad.metrics.followers
+                                                    )
+                                                  )}
+                                                </span>
+                                              </span>
+                                              <span className={metricPillClass}>
+                                                {labels.amountSpent}{" "}
+                                                <span className="text-slate-100">
+                                                  {formatMetric(
+                                                    parseMetric(
+                                                      ad.metrics.amountSpent
+                                                    )
+                                                  )}
+                                                </span>
+                                              </span>
+                                              <span className={metricPillClass}>
+                                                {labels.timeDays}{" "}
+                                                <span className="text-slate-100">
+                                                  {formatMetric(
+                                                    parseMetric(
+                                                      ad.metrics.timeDays
+                                                    )
+                                                  )}
+                                                </span>
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+              ) : null}
+
               {hasMediaButton || hasLinkButton ? (
                 <div className={`mt-6 ${textAlign}`}>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
                     {labels.linksLabel}
                   </p>
-                  <div className={`mt-3 flex flex-wrap items-center gap-3 ${rowClass}`}>
-                  {hasMediaButton ? (
-                    <a
-                      href={data.results.mediaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={ctaButtonClass}
-                    >
-                      {mediaButtonLabel}
-                    </a>
-                  ) : null}
-                  {hasLinkButton ? (
-                    <a
-                      href={data.results.linkUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={ctaButtonClass}
-                    >
-                      {linkButtonLabel}
-                    </a>
-                  ) : null}
+                  <div
+                    className={`mt-3 flex flex-wrap items-center gap-3 ${rowClass}`}
+                  >
+                    {hasMediaButton ? (
+                      <a
+                        href={data.results.mediaUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={ctaButtonClass}
+                      >
+                        {mediaButtonLabel}
+                      </a>
+                    ) : null}
+                    {hasLinkButton ? (
+                      <a
+                        href={data.results.linkUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={ctaButtonClass}
+                      >
+                        {linkButtonLabel}
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
